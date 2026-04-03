@@ -63,30 +63,33 @@ export default function Grupos() {
     setCreating(true)
     setError(null)
     try {
-      const { data: grupo, error: grupoError } = await supabase
+      const grupoId = crypto.randomUUID()
+
+      const { error: grupoError } = await supabase
         .from('grupos')
         .insert({
+          id: grupoId,
           nome: novoNome.trim(),
           descricao: novaDesc.trim() || null,
           formato: novoFormato,
           criado_por: user.id,
         })
-        .select()
-        .single()
 
       if (grupoError) throw grupoError
 
-      await supabase.from('grupo_membros').insert({
-        grupo_id: grupo.id,
+      const { error: membroError } = await supabase.from('grupo_membros').insert({
+        grupo_id: grupoId,
         profile_id: user.id,
         role: 'admin',
       })
+
+      if (membroError) throw membroError
 
       setShowModal(false)
       setNovoNome('')
       setNovaDesc('')
       setNovoFormato('7x7')
-      navigate(`/grupos/${grupo.id}`)
+      navigate(`/grupos/${grupoId}`)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao criar grupo.'
       setError(msg)
