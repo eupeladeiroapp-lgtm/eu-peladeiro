@@ -14,7 +14,7 @@ const SKILLS = [
 ]
 
 export default function Onboarding() {
-  const { user } = useAuth()
+  const { user, refetchProfile } = useAuth()
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
@@ -77,6 +77,7 @@ export default function Onboarding() {
         created_at: new Date().toISOString(),
       })
       if (upsertError) throw upsertError
+      await refetchProfile()
       navigate('/', { replace: true })
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao salvar perfil.'

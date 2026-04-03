@@ -1,7 +1,6 @@
 import React from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
-import { useProfile } from './hooks/useProfile'
 
 import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
@@ -18,8 +17,7 @@ import Convites from './pages/Convites'
 import Sobre from './pages/Sobre'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading } = useAuth()
-  const { profile, loading: profileLoading } = useProfile()
+  const { user, loading: authLoading, profile, profileLoading } = useAuth()
   const location = useLocation()
 
   if (authLoading || profileLoading) {
