@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { AuthProvider, useAuth } from './hooks/useAuth'
 
 import Login from './pages/Login'
+import GrupoConvite from './pages/GrupoConvite'
 import Onboarding from './pages/Onboarding'
 import Home from './pages/Home'
 import Grupos from './pages/Grupos'
@@ -47,6 +48,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/jogo/:token" element={<JogoConvite />} />
+      <Route path="/grupo/convite/:id" element={<GrupoConvite />} />
       <Route
         path="/onboarding"
         element={

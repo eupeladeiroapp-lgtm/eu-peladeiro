@@ -78,7 +78,12 @@ export default function Onboarding() {
       })
       if (upsertError) throw upsertError
       await refetchProfile()
-      navigate('/', { replace: true })
+      const pendingGroup = localStorage.getItem('pendingGroupInvite')
+      if (pendingGroup) {
+        navigate(`/grupo/convite/${pendingGroup}`, { replace: true })
+      } else {
+        navigate('/', { replace: true })
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao salvar perfil.'
       setError(msg)

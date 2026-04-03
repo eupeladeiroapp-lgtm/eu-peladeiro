@@ -1,4 +1,4 @@
-import { ArrowLeft, Calendar, Crown, Plus, Trophy, User, Users, X } from 'lucide-react'
+import { ArrowLeft, Calendar, Crown, Plus, Share2, Trophy, User, Users, X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import CardJogo from '../components/CardJogo'
@@ -49,7 +49,7 @@ export default function GrupoDetalhe() {
       if (grupoData) setJogoFormato(grupoData.formato || '7x7')
 
       const { data: membrosData } = await supabase
-        .from('grupos_membros')
+        .from('grupo_membros')
         .select('*, profile:profiles(*)')
         .eq('grupo_id', id)
 
@@ -79,9 +79,9 @@ export default function GrupoDetalhe() {
     setError(null)
     try {
       const dataHora = new Date(`${jogoData}T${jogoHora}:00`)
-      const token = Math.random().toString(36).substring(2, 10)
+      const token = crypto.randomUUID().replace(/-/g, '').substring(0, 12)
 
-      const { data: novoJogo, error: jogoError } = await supabase
+      const { error: jogoError } = await supabase
         .from('jogos')
         .insert({
           grupo_id: id,
@@ -93,13 +93,11 @@ export default function GrupoDetalhe() {
           link_token: token,
           criado_por: user.id,
         })
-        .select()
-        .single()
 
       if (jogoError) throw jogoError
 
       setShowCreateJogo(false)
-      navigate(`/jogo/${novoJogo.link_token}`)
+      navigate(`/jogo/${token}`)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao criar jogo.'
       setError(msg)
@@ -167,6 +165,21 @@ export default function GrupoDetalhe() {
         {/* Membros tab */}
         {tab === 'membros' && (
           <div className="space-y-3">
+            <button
+              onClick={() => {
+                const link = `${window.location.origin}/grupo/convite/${id}`
+                const texto = `Vem jogar comigo na pelada! Entra no grupo pelo Eu Peladeiro: ${link}`
+                if (navigator.share) {
+                  navigator.share({ title: 'Eu Peladeiro', text: texto, url: link })
+                } else {
+                  const whatsapp = `https://wa.me/?text=${encodeURIComponent(texto)}`
+                  window.open(whatsapp, '_blank')
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-verde-campo text-white font-semibold py-3 rounded-xl hover:bg-verde-escuro transition-colors"
+            >
+              <Share2 size={18} /> Convidar jogadores
+            </button>
             {loading ? (
               [1, 2, 3].map((i) => (
                 <div key={i} className="bg-white rounded-lg p-4 animate-pulse h-16" />
