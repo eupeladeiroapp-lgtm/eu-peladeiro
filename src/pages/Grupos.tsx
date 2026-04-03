@@ -29,10 +29,21 @@ export default function Grupos() {
     if (!user) return
     try {
       setLoading(true)
+      const { data: membros } = await supabase
+        .from('grupo_membros')
+        .select('grupo_id')
+        .eq('profile_id', user.id)
+
+      const grupoIds = (membros || []).map((m) => m.grupo_id)
+      if (grupoIds.length === 0) {
+        setGrupos([])
+        return
+      }
+
       const { data } = await supabase
         .from('grupos')
-        .select('*, grupos_membros!inner(profile_id)')
-        .eq('grupos_membros.profile_id', user.id)
+        .select('*')
+        .in('id', grupoIds)
         .order('created_at', { ascending: false })
 
       setGrupos((data as Grupo[]) || [])
@@ -65,7 +76,7 @@ export default function Grupos() {
 
       if (grupoError) throw grupoError
 
-      await supabase.from('grupos_membros').insert({
+      await supabase.from('grupo_membros').insert({
         grupo_id: grupo.id,
         profile_id: user.id,
         role: 'admin',

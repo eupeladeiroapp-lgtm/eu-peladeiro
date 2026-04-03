@@ -4,74 +4,78 @@ import { useNavigate } from 'react-router-dom'
 import CardJogo from '../components/CardJogo'
 import Layout from '../components/Layout'
 import { useAuth } from '../hooks/useAuth'
-import { useProfile } from '../hooks/useProfile'
 import { supabase } from '../lib/supabase'
 import { Jogo } from '../types'
 
-const MOCK_JOGOS: Jogo[] = [
-  {
-    id: '1',
-    grupo_id: 'g1',
-    data_hora: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-    local: 'Society do Zé, Rua das Flores, 123',
-    formato: '7x7',
-    num_times: 4,
-    status: 'aberto',
-    link_token: 'abc123',
-    criado_por: 'user1',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    grupo_id: 'g2',
-    data_hora: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-    local: 'Quadra Municipal Centro',
-    formato: '5x5',
-    num_times: 3,
-    status: 'aberto',
-    link_token: 'def456',
-    criado_por: 'user2',
-    created_at: new Date().toISOString(),
-  },
-]
-
 export default function Home() {
-  const { user } = useAuth()
-  const { profile } = useProfile()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const [jogos, setJogos] = useState<Jogo[]>([])
   const [loading, setLoading] = useState(true)
+  const [totalGrupos, setTotalGrupos] = useState(0)
+  const [golsMes, setGolsMes] = useState(0)
   const [showFAB, setShowFAB] = useState(false)
 
   useEffect(() => {
-    async function fetchJogos() {
-      if (!user) return
-      try {
-        const { data } = await supabase
-          .from('jogos')
-          .select('*, grupos_membros!inner(profile_id)')
-          .eq('grupos_membros.profile_id', user.id)
-          .in('status', ['aberto', 'em_andamento'])
-          .order('data_hora', { ascending: true })
-          .limit(10)
-
-        if (data && data.length > 0) {
-          setJogos(data as Jogo[])
-        } else {
-          setJogos(MOCK_JOGOS)
-        }
-      } catch {
-        setJogos(MOCK_JOGOS)
-      } finally {
-        setLoading(false)
-      }
-    }
+    if (!user) return
     fetchJogos()
+    fetchStats()
   }, [user])
+
+  async function fetchJogos() {
+    if (!user) return
+    try {
+      setLoading(true)
+      const { data: membros } = await supabase
+        .from('grupo_membros')
+        .select('grupo_id')
+        .eq('profile_id', user.id)
+
+      const grupoIds = (membros || []).map((m) => m.grupo_id)
+
+      if (grupoIds.length === 0) {
+        setJogos([])
+        return
+      }
+
+      const { data } = await supabase
+        .from('jogos')
+        .select('*')
+        .in('grupo_id', grupoIds)
+        .in('status', ['aberto', 'em_andamento'])
+        .order('data_hora', { ascending: true })
+        .limit(10)
+
+      setJogos((data as Jogo[]) || [])
+    } catch {
+      setJogos([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function fetchStats() {
+    if (!user) return
+    const { count } = await supabase
+      .from('grupo_membros')
+      .select('*', { count: 'exact', head: true })
+      .eq('profile_id', user.id)
+    setTotalGrupos(count || 0)
+
+    const inicioMes = new Date()
+    inicioMes.setDate(1)
+    inicioMes.setHours(0, 0, 0, 0)
+    const { data: stats } = await supabase
+      .from('estatisticas')
+      .select('gols')
+      .eq('profile_id', user.id)
+      .gte('created_at', inicioMes.toISOString())
+    const total = (stats || []).reduce((sum, s) => sum + (s.gols || 0), 0)
+    setGolsMes(total)
+  }
 
   const nome = profile?.nome || user?.user_metadata?.full_name || 'Peladeiro'
   const primeiroNome = nome.split(' ')[0]
-
   const avatarUrl = profile?.foto_url || user?.user_metadata?.avatar_url || null
 
   return (
@@ -109,8 +113,8 @@ export default function Home() {
         <div className="grid grid-cols-3 gap-3 mt-5">
           {[
             { label: 'Próximos jogos', value: jogos.length, icon: '⚽' },
-            { label: 'Grupos', value: 2, icon: '👥' },
-            { label: 'Gols no mês', value: 3, icon: '🥅' },
+            { label: 'Grupos', value: totalGrupos, icon: '👥' },
+            { label: 'Gols no mês', value: golsMes, icon: '🥅' },
           ].map((stat) => (
             <div key={stat.label} className="bg-white/15 rounded-lg p-3 text-center">
               <p className="text-xl">{stat.icon}</p>
@@ -149,11 +153,11 @@ export default function Home() {
               <CardJogo
                 key={jogo.id}
                 jogo={jogo}
-                groupName={jogo.grupo_id === 'g1' ? 'Pelada dos Amigos' : 'Fut Quinta-Feira'}
-                confirmados={8}
+                groupName="Grupo"
+                confirmados={0}
                 totalVagas={14}
-                avatars={[null, null, null]}
-                nomes={['João', 'Pedro', 'Carlos']}
+                avatars={[]}
+                nomes={[]}
                 onConfirmar={() => {}}
                 onRecusar={() => {}}
                 onClick={() => navigate(`/jogo/${jogo.link_token}`)}
@@ -228,12 +232,8 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Backdrop */}
       {showFAB && (
-        <div
-          className="fixed inset-0 z-30"
-          onClick={() => setShowFAB(false)}
-        />
+        <div className="fixed inset-0 z-30" onClick={() => setShowFAB(false)} />
       )}
     </Layout>
   )
