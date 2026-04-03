@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1D9E75"/>
+      <stop offset="100%" style="stop-color:#085041"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="100" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="155" fill="none" stroke="white" stroke-width="12" opacity="0.4"/>
+  <circle cx="256" cy="256" r="48" fill="white"/>
+  <path d="M256,101 L256,145" stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+  <path d="M256,367 L256,411" stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+  <path d="M101,256 L145,256" stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+  <path d="M367,256 L411,256" stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+  <path d="M146.6,146.6 L175.4,175.4" stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+  <path d="M336.6,336.6 L365.4,365.4" stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+  <path d="M365.4,146.6 L336.6,175.4" stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+  <path d="M175.4,336.6 L146.6,365.4" stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+  <text x="256" y="440" text-anchor="middle" font-family="Arial, sans-serif" font-size="38" font-weight="bold" fill="white" opacity="0.85">Eu Peladeiro</text>
+</svg>
