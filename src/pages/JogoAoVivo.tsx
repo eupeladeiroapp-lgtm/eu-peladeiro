@@ -20,7 +20,7 @@ export default function JogoAoVivo() {
   // Timer
   const [tempo, setTempo] = useState(0)
   const [timerRunning, setTimerRunning] = useState(false)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     fetchData()
