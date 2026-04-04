@@ -133,6 +133,23 @@ export default function Sobre() {
           Compartilhar o app com amigos
         </button>
 
+        {/* Links legais */}
+        <div className="flex justify-center gap-4 mb-4 text-xs">
+          <button
+            onClick={() => navigate('/privacidade')}
+            className="text-verde-campo underline underline-offset-2"
+          >
+            Política de Privacidade
+          </button>
+          <span className="text-gray-300">·</span>
+          <button
+            onClick={() => navigate('/termos')}
+            className="text-verde-campo underline underline-offset-2"
+          >
+            Termos de Serviço
+          </button>
+        </div>
+
         {/* Footer */}
         <div className="text-center text-gray-400 text-sm">
           <p>Feito com ❤️ para a galera da pelada</p>

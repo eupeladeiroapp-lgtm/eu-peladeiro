@@ -17,6 +17,8 @@ import Perfil from './pages/Perfil'
 import Convites from './pages/Convites'
 import Sobre from './pages/Sobre'
 import AvaliacaoHabilidades from './pages/AvaliacaoHabilidades'
+import PoliticaPrivacidade from './pages/PoliticaPrivacidade'
+import TermosServico from './pages/TermosServico'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading, profile, profileLoading } = useAuth()
@@ -48,6 +50,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/privacidade" element={<PoliticaPrivacidade />} />
+      <Route path="/termos" element={<TermosServico />} />
       <Route path="/jogo/:token" element={<JogoConvite />} />
       <Route path="/grupo/convite/:id" element={<GrupoConvite />} />
       <Route
