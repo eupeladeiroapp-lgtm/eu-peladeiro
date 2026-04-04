@@ -87,7 +87,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: 'https://www.eupeladeiro.com.br' },
+      options: {
+        redirectTo: 'https://www.eupeladeiro.com.br',
+        queryParams: { prompt: 'select_account' },
+      },
     })
   }
 
