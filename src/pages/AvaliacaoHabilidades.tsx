@@ -159,7 +159,9 @@ export default function AvaliacaoHabilidades() {
           </div>
         ) : membros.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
-            <p className="text-lg">Nenhum outro membro para avaliar.</p>
+            <p className="text-4xl mb-3">👥</p>
+            <p className="font-semibold text-gray-600 text-lg">Nenhum outro membro para avaliar</p>
+            <p className="text-sm mt-2 text-gray-400">Convide jogadores para o grupo e volte aqui para avaliá-los.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -170,8 +172,9 @@ export default function AvaliacaoHabilidades() {
                 <div key={membro.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                   {/* Header do membro */}
                   <button
-                    className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center gap-3 p-4 active:bg-gray-50 transition-colors text-left"
                     onClick={() => toggleExpandido(membro.profile_id)}
+                    type="button"
                   >
                     <div className="w-10 h-10 rounded-full overflow-hidden bg-verde-campo flex items-center justify-center flex-shrink-0">
                       {membro.profile?.foto_url ? (

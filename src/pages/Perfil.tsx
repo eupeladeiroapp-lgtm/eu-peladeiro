@@ -199,7 +199,7 @@ export default function Perfil() {
       </div>
 
       {/* Habilidades */}
-      {profile?.habilidades && (
+      {profile && (
         <div className="px-5 mt-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-bold text-gray-700">Habilidades</h2>
@@ -214,7 +214,7 @@ export default function Perfil() {
             {SKILLS.map(({ key, label, emoji }) => {
               const value = editandoHabilidades
                 ? (habilidadesEdit[key] ?? 5)
-                : (profile.habilidades[key as keyof typeof profile.habilidades] || 5)
+                : (profile.habilidades?.[key as keyof typeof profile.habilidades] || 5)
               return (
                 <div key={key} className="flex items-center gap-3">
                   <span className="text-lg w-6">{emoji}</span>
