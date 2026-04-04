@@ -56,8 +56,8 @@ export default function JogoRegistro() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchData()
-  }, [id])
+    if (user) fetchData()
+  }, [id, user])
 
   async function fetchData() {
     if (!id) return
