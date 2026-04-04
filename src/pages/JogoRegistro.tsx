@@ -10,8 +10,38 @@ interface JogadorStats {
   gols: number
   assistencias: number
   defesas: number
-  cartao_amarelo: number
-  cartao_vermelho: number
+  vitorias: number
+}
+
+function CounterInput({
+  value,
+  onChange,
+  label,
+}: {
+  value: number
+  onChange: (v: number) => void
+  label: string
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <p className="text-xs text-gray-500 font-medium text-center leading-tight">{label}</p>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onChange(value - 1)}
+          className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 font-bold text-base"
+        >
+          −
+        </button>
+        <span className="font-bold text-lg w-6 text-center text-verde-campo">{value}</span>
+        <button
+          onClick={() => onChange(value + 1)}
+          className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 font-bold text-base"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  )
 }
 
 export default function JogoRegistro() {
@@ -51,8 +81,7 @@ export default function JogoRegistro() {
             gols: stats?.gols || 0,
             assistencias: stats?.assistencias || 0,
             defesas: stats?.defesas || 0,
-            cartao_amarelo: stats?.cartao_amarelo || 0,
-            cartao_vermelho: stats?.cartao_vermelho || 0,
+            vitorias: (stats as any)?.vitorias || 0,
           }
         }
       )
@@ -84,8 +113,7 @@ export default function JogoRegistro() {
         gols: j.gols,
         assistencias: j.assistencias,
         defesas: j.defesas,
-        cartao_amarelo: j.cartao_amarelo,
-        cartao_vermelho: j.cartao_vermelho,
+        vitorias: j.vitorias,
       }))
 
       const { error: upsertError } = await supabase
@@ -101,39 +129,6 @@ export default function JogoRegistro() {
     } finally {
       setSaving(false)
     }
-  }
-
-  function CounterInput({
-    value,
-    onChange,
-    label,
-    color = 'verde-campo',
-  }: {
-    value: number
-    onChange: (v: number) => void
-    label: string
-    color?: string
-  }) {
-    return (
-      <div className="flex flex-col items-center gap-1">
-        <p className="text-xs text-gray-500 font-medium">{label}</p>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onChange(value - 1)}
-            className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 font-bold text-lg leading-none"
-          >
-            −
-          </button>
-          <span className={`font-bold text-lg w-6 text-center text-${color}`}>{value}</span>
-          <button
-            onClick={() => onChange(value + 1)}
-            className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 font-bold text-lg leading-none"
-          >
-            +
-          </button>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -185,34 +180,31 @@ export default function JogoRegistro() {
                   </div>
                 </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-5 gap-2">
+                {/* Stats — linha 1 */}
+                <div className="grid grid-cols-3 gap-2 mb-3">
                   <CounterInput
                     value={j.gols}
                     onChange={(v) => updateJogador(j.profile.id, 'gols', v)}
-                    label="Gols"
+                    label="⚽ Gols"
                   />
                   <CounterInput
                     value={j.assistencias}
                     onChange={(v) => updateJogador(j.profile.id, 'assistencias', v)}
-                    label="Assist."
-                  />
-                  {j.profile.posicao_principal === 'GOL' && (
-                    <CounterInput
-                      value={j.defesas}
-                      onChange={(v) => updateJogador(j.profile.id, 'defesas', v)}
-                      label="Defesas"
-                    />
-                  )}
-                  <CounterInput
-                    value={j.cartao_amarelo}
-                    onChange={(v) => updateJogador(j.profile.id, 'cartao_amarelo', v)}
-                    label="🟨"
+                    label="👟 Assist."
                   />
                   <CounterInput
-                    value={j.cartao_vermelho}
-                    onChange={(v) => updateJogador(j.profile.id, 'cartao_vermelho', v)}
-                    label="🟥"
+                    value={j.vitorias}
+                    onChange={(v) => updateJogador(j.profile.id, 'vitorias', v)}
+                    label="🏆 Vitórias"
+                  />
+                </div>
+
+                {/* Stats — linha 2 */}
+                <div className="grid grid-cols-3 gap-2">
+                  <CounterInput
+                    value={j.defesas}
+                    onChange={(v) => updateJogador(j.profile.id, 'defesas', v)}
+                    label="🧤 Defesas"
                   />
                 </div>
               </div>
