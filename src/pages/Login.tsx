@@ -93,7 +93,10 @@ export default function Login() {
       </div>
 
       <p className="text-white/50 text-xs text-center">
-        Ao entrar, você concorda com nossos termos de uso.
+        Ao entrar, você concorda com nossos{' '}
+        <a href="/termos" className="underline hover:text-white/80">Termos de Uso</a>
+        {' '}e com nossa{' '}
+        <a href="/privacidade" className="underline hover:text-white/80">Política de Privacidade</a>.
       </p>
     </div>
   )
