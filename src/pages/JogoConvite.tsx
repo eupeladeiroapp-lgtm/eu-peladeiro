@@ -1,4 +1,4 @@
-import { Calendar, Check, MapPin, Share2, Shuffle, Users, X } from 'lucide-react'
+import { Calendar, Check, ChevronDown, ChevronUp, MapPin, Share2, Shuffle, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AvatarStack from '../components/AvatarStack'
@@ -32,6 +32,7 @@ export default function JogoConvite() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [listaExpandida, setListaExpandida] = useState(false)
 
   useEffect(() => {
     fetchJogo()
@@ -251,24 +252,43 @@ export default function JogoConvite() {
             </div>
           </div>
 
-          {/* Confirmed players list */}
+          {/* Confirmed players list - expandable */}
           {confirmacoesProfiles.length > 0 && (
             <div className="pt-3 border-t border-gray-100">
-              <p className="text-xs font-semibold text-gray-500 mb-2">Quem vai jogar:</p>
-              <div className="flex flex-wrap gap-2">
-                {confirmacoesProfiles.map((p) => (
-                  <div key={p.id} className="flex items-center gap-1.5 bg-gray-50 rounded-full px-2.5 py-1">
-                    <div className="w-5 h-5 rounded-full overflow-hidden bg-verde-campo flex items-center justify-center flex-shrink-0">
-                      {p.foto_url ? (
-                        <img src={p.foto_url} alt={p.nome} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-white text-xs font-bold">{p.nome?.[0]?.toUpperCase()}</span>
-                      )}
+              <button
+                onClick={() => setListaExpandida((v) => !v)}
+                className="w-full flex items-center justify-between text-left"
+                type="button"
+              >
+                <p className="text-xs font-semibold text-gray-500">
+                  Quem vai jogar ({confirmacoesProfiles.length}):
+                </p>
+                {listaExpandida
+                  ? <ChevronUp size={16} className="text-gray-400" />
+                  : <ChevronDown size={16} className="text-gray-400" />
+                }
+              </button>
+              {listaExpandida && (
+                <div className="mt-2 space-y-2">
+                  {confirmacoesProfiles.map((p) => (
+                    <div key={p.id} className="flex items-center gap-2.5 py-1">
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-verde-campo flex items-center justify-center flex-shrink-0">
+                        {p.foto_url ? (
+                          <img src={p.foto_url} alt={p.nome} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-white text-sm font-bold">{p.nome?.[0]?.toUpperCase()}</span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{p.nome}</p>
+                        {p.posicao_principal && (
+                          <p className="text-xs text-gray-400">{p.posicao_principal}</p>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-xs font-medium text-gray-700">{p.nome.split(' ')[0]}</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

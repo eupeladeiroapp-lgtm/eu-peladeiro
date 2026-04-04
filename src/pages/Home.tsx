@@ -7,10 +7,17 @@ import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { Jogo } from '../types'
 
+interface JogoComDados extends Jogo {
+  confirmados: number
+  totalMembros: number
+  grupoNome: string
+  userStatus: 'confirmado' | 'recusado' | null
+}
+
 export default function Home() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
-  const [jogos, setJogos] = useState<Jogo[]>([])
+  const [jogos, setJogos] = useState<JogoComDados[]>([])
   const [loading, setLoading] = useState(true)
   const [totalGrupos, setTotalGrupos] = useState(0)
   const [golsMes, setGolsMes] = useState(0)
@@ -27,32 +34,82 @@ export default function Home() {
     if (!user) return
     try {
       setLoading(true)
+
       const { data: membros } = await supabase
         .from('grupo_membros')
         .select('grupo_id')
         .eq('profile_id', user.id)
 
       const grupoIds = (membros || []).map((m) => m.grupo_id)
+      if (grupoIds.length === 0) { setJogos([]); return }
 
-      if (grupoIds.length === 0) {
-        setJogos([])
-        return
-      }
-
-      const { data } = await supabase
+      // Busca jogos + nome do grupo
+      const { data: jogosData } = await supabase
         .from('jogos')
-        .select('*')
+        .select('*, grupo:grupos(nome)')
         .in('grupo_id', grupoIds)
         .in('status', ['aberto', 'em_andamento'])
         .order('data_hora', { ascending: true })
         .limit(10)
 
-      setJogos((data as Jogo[]) || [])
+      if (!jogosData || jogosData.length === 0) { setJogos([]); return }
+
+      const jogoIds = jogosData.map((j) => j.id)
+
+      // Busca confirmações de todos os jogos
+      const { data: confsData } = await supabase
+        .from('confirmacoes')
+        .select('jogo_id, profile_id, status')
+        .in('jogo_id', jogoIds)
+
+      // Busca total de membros por grupo
+      const { data: membrosGrupo } = await supabase
+        .from('grupo_membros')
+        .select('grupo_id')
+        .in('grupo_id', grupoIds)
+
+      const membrosPorGrupo: Record<string, number> = {}
+      for (const m of membrosGrupo || []) {
+        membrosPorGrupo[m.grupo_id] = (membrosPorGrupo[m.grupo_id] || 0) + 1
+      }
+
+      const jogosComDados: JogoComDados[] = jogosData.map((jogo) => {
+        const confsJogo = (confsData || []).filter((c) => c.jogo_id === jogo.id)
+        const confirmados = confsJogo.filter((c) => c.status === 'confirmado').length
+        const myConf = confsJogo.find((c) => c.profile_id === user.id)
+        return {
+          ...jogo,
+          confirmados,
+          totalMembros: membrosPorGrupo[jogo.grupo_id] || 0,
+          grupoNome: (jogo.grupo as { nome: string } | null)?.nome || 'Grupo',
+          userStatus: (myConf?.status as 'confirmado' | 'recusado') || null,
+        }
+      })
+
+      setJogos(jogosComDados)
     } catch {
       setJogos([])
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleConfirmar(jogoId: string) {
+    if (!user) return
+    await supabase.from('confirmacoes').upsert(
+      { jogo_id: jogoId, profile_id: user.id, status: 'confirmado', tipo_convite: 'fixo' },
+      { onConflict: 'jogo_id,profile_id' }
+    )
+    setJogos((prev) => prev.map((j) => j.id === jogoId ? { ...j, userStatus: 'confirmado', confirmados: j.confirmados + (j.userStatus === 'confirmado' ? 0 : 1) } : j))
+  }
+
+  async function handleRecusar(jogoId: string) {
+    if (!user) return
+    await supabase.from('confirmacoes').upsert(
+      { jogo_id: jogoId, profile_id: user.id, status: 'recusado', tipo_convite: 'fixo' },
+      { onConflict: 'jogo_id,profile_id' }
+    )
+    setJogos((prev) => prev.map((j) => j.id === jogoId ? { ...j, userStatus: 'recusado', confirmados: j.confirmados - (j.userStatus === 'confirmado' ? 1 : 0) } : j))
   }
 
   async function fetchStats() {
@@ -71,10 +128,8 @@ export default function Home() {
       .select('gols, defesas')
       .eq('profile_id', user.id)
       .gte('created_at', inicioMes.toISOString())
-    const totalGols = (stats || []).reduce((sum, s) => sum + (s.gols || 0), 0)
-    const totalDefesas = (stats || []).reduce((sum, s) => sum + (s.defesas || 0), 0)
-    setGolsMes(totalGols)
-    setDefesasMes(totalDefesas)
+    setGolsMes((stats || []).reduce((sum, s) => sum + (s.gols || 0), 0))
+    setDefesasMes((stats || []).reduce((sum, s) => sum + (s.defesas || 0), 0))
   }
 
   const isGoleiro = profile?.posicao_principal === 'GOL'
@@ -85,10 +140,7 @@ export default function Home() {
   return (
     <Layout>
       {/* Header */}
-      <div
-        className="px-5 pt-12 pb-6"
-        style={{ background: 'linear-gradient(160deg, #1D9E75, #085041)' }}
-      >
+      <div className="px-5 pt-12 pb-6" style={{ background: 'linear-gradient(160deg, #1D9E75, #085041)' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white/40">
@@ -113,7 +165,6 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mt-5">
           {[
             { label: 'Próximos jogos', value: jogos.length, icon: '⚽' },
@@ -135,10 +186,7 @@ export default function Home() {
       <div className="px-5 py-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-gray-800 font-bold text-lg">Próximos jogos</h2>
-          <button
-            onClick={() => navigate('/grupos')}
-            className="text-verde-campo text-sm font-semibold"
-          >
+          <button onClick={() => navigate('/grupos')} className="text-verde-campo text-sm font-semibold">
             Ver grupos
           </button>
         </div>
@@ -159,13 +207,12 @@ export default function Home() {
               <CardJogo
                 key={jogo.id}
                 jogo={jogo}
-                groupName="Grupo"
-                confirmados={0}
-                totalVagas={14}
-                avatars={[]}
-                nomes={[]}
-                onConfirmar={() => {}}
-                onRecusar={() => {}}
+                groupName={jogo.grupoNome}
+                confirmados={jogo.confirmados}
+                totalVagas={jogo.totalMembros}
+                userStatus={jogo.userStatus}
+                onConfirmar={() => handleConfirmar(jogo.id)}
+                onRecusar={() => handleRecusar(jogo.id)}
                 onClick={() => navigate(`/jogo/${jogo.link_token}`)}
               />
             ))}
@@ -186,7 +233,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Quick actions */}
         <div className="mt-6">
           <h2 className="text-gray-800 font-bold text-lg mb-3">Ações rápidas</h2>
           <div className="grid grid-cols-2 gap-3">
@@ -215,7 +261,7 @@ export default function Home() {
       {/* FAB */}
       <div className="fixed bottom-24 right-5 z-40">
         {showFAB && (
-          <div className="absolute bottom-14 right-0 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden animate-slide-up min-w-[180px]">
+          <div className="absolute bottom-14 right-0 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden min-w-[180px]">
             <button
               onClick={() => { setShowFAB(false); navigate('/grupos') }}
               className="w-full text-left px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-b border-gray-100"
@@ -238,9 +284,7 @@ export default function Home() {
         </button>
       </div>
 
-      {showFAB && (
-        <div className="fixed inset-0 z-30" onClick={() => setShowFAB(false)} />
-      )}
+      {showFAB && <div className="fixed inset-0 z-30" onClick={() => setShowFAB(false)} />}
     </Layout>
   )
 }
