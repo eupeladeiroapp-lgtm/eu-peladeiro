@@ -261,7 +261,8 @@ export default function GrupoDetalhe() {
     if (!id) return
     setDeleting(true)
     try {
-      await supabase.from('grupos').delete().eq('id', id)
+      const { error } = await supabase.from('grupos').delete().eq('id', id)
+      if (error) { setError(error.message); setShowDeleteGrupo(false); return }
       navigate('/grupos')
     } finally {
       setDeleting(false)
@@ -303,7 +304,8 @@ export default function GrupoDetalhe() {
     if (!jogoParaDeletar) return
     setDeleting(true)
     try {
-      await supabase.from('jogos').delete().eq('id', jogoParaDeletar.id)
+      const { error } = await supabase.from('jogos').delete().eq('id', jogoParaDeletar.id)
+      if (error) { setError(error.message); return }
       setShowDeleteJogo(false)
       setJogoParaDeletar(null)
       fetchAll()
