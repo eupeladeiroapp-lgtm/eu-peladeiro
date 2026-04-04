@@ -2,6 +2,7 @@ import { ArrowLeft, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Layout from '../components/Layout'
+import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { Confirmacao, Estatistica, Profile } from '../types'
 
@@ -47,6 +48,7 @@ function CounterInput({
 export default function JogoRegistro() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [jogadores, setJogadores] = useState<JogadorStats[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -103,22 +105,30 @@ export default function JogoRegistro() {
   }
 
   async function handleSalvar() {
-    if (!id) return
+    if (!id || !user) return
     setSaving(true)
     setError(null)
     try {
-      const upserts = jogadores.map((j) => ({
-        jogo_id: id,
-        profile_id: j.profile.id,
-        gols: j.gols,
-        assistencias: j.assistencias,
-        defesas: j.defesas,
-        vitorias: j.vitorias,
-      }))
+      // Salva apenas as estatísticas do próprio usuário logado
+      const minha = jogadores.find((j) => j.profile.id === user.id)
+      if (!minha) {
+        setError('Você não está na lista de confirmados neste jogo.')
+        return
+      }
 
       const { error: upsertError } = await supabase
         .from('estatisticas')
-        .upsert(upserts, { onConflict: 'jogo_id,profile_id' })
+        .upsert(
+          {
+            jogo_id: id,
+            profile_id: user.id,
+            gols: minha.gols,
+            assistencias: minha.assistencias,
+            defesas: minha.defesas,
+            vitorias: minha.vitorias,
+          },
+          { onConflict: 'jogo_id,profile_id' }
+        )
 
       if (upsertError) {
         setError(`${upsertError.message} (${upsertError.code})`)
@@ -128,7 +138,7 @@ export default function JogoRegistro() {
       setTimeout(() => setSaved(false), 3000)
     } catch (err: unknown) {
       console.error('Erro ao salvar:', JSON.stringify(err))
-      const msg = err instanceof Error ? err.message : (typeof err === 'object' ? JSON.stringify(err) : 'Erro ao salvar estatísticas.')
+      const msg = err instanceof Error ? err.message : 'Erro ao salvar estatísticas.'
       setError(msg)
     } finally {
       setSaving(false)
