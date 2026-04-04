@@ -120,11 +120,15 @@ export default function JogoRegistro() {
         .from('estatisticas')
         .upsert(upserts, { onConflict: 'jogo_id,profile_id' })
 
-      if (upsertError) throw upsertError
+      if (upsertError) {
+        setError(`${upsertError.message} (${upsertError.code})`)
+        return
+      }
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao salvar estatísticas.'
+      console.error('Erro ao salvar:', JSON.stringify(err))
+      const msg = err instanceof Error ? err.message : (typeof err === 'object' ? JSON.stringify(err) : 'Erro ao salvar estatísticas.')
       setError(msg)
     } finally {
       setSaving(false)
