@@ -3,9 +3,19 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import CardJogo from '../components/CardJogo'
 import Layout from '../components/Layout'
+import RankingList from '../components/RankingList'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
-import { Grupo, GrupoMembro, Jogo, Profile } from '../types'
+import { Estatistica, Grupo, GrupoMembro, Jogo, Profile } from '../types'
+
+interface RankingEntry {
+  id: string
+  nome: string
+  foto_url: string | null
+  valor: number
+}
+
+type TabRanking = 'goleador' | 'garcom' | 'muralha' | 'vitorias'
 
 type TabType = 'membros' | 'jogos' | 'rankings'
 
@@ -25,6 +35,9 @@ export default function GrupoDetalhe() {
   const [showCreateJogo, setShowCreateJogo] = useState(false)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [rankingTab, setRankingTab] = useState<TabRanking>('goleador')
+  const [rankings, setRankings] = useState<RankingEntry[]>([])
+  const [rankingLoading, setRankingLoading] = useState(false)
 
   const [jogoData, setJogoData] = useState('')
   const [jogoHora, setJogoHora] = useState('19:00')
@@ -36,6 +49,54 @@ export default function GrupoDetalhe() {
   useEffect(() => {
     fetchAll()
   }, [id])
+
+  useEffect(() => {
+    if (tab === 'rankings') fetchRankings()
+  }, [tab, rankingTab, id])
+
+  async function fetchRankings() {
+    if (!id) return
+    setRankingLoading(true)
+    try {
+      const { data: jogoIds } = await supabase
+        .from('jogos')
+        .select('id')
+        .eq('grupo_id', id)
+
+      if (!jogoIds || jogoIds.length === 0) { setRankings([]); return }
+
+      const ids = jogoIds.map((j: { id: string }) => j.id)
+
+      const { data: statsData } = await supabase
+        .from('estatisticas')
+        .select('*, profile:profiles(*)')
+        .in('jogo_id', ids)
+
+      if (!statsData || statsData.length === 0) { setRankings([]); return }
+
+      const agg: Record<string, { profile: Profile; gols: number; assistencias: number; defesas: number; vitorias: number }> = {}
+      for (const stat of statsData as (Estatistica & { profile: Profile })[]) {
+        if (!agg[stat.profile_id]) {
+          agg[stat.profile_id] = { profile: stat.profile, gols: 0, assistencias: 0, defesas: 0, vitorias: 0 }
+        }
+        agg[stat.profile_id].gols += stat.gols
+        agg[stat.profile_id].assistencias += stat.assistencias
+        agg[stat.profile_id].defesas += stat.defesas
+        agg[stat.profile_id].vitorias += (stat as any).vitorias || 0
+      }
+
+      const field = rankingTab === 'goleador' ? 'gols' : rankingTab === 'garcom' ? 'assistencias' : rankingTab === 'muralha' ? 'defesas' : 'vitorias'
+      const sorted = Object.values(agg)
+        .map((e) => ({ id: e.profile.id, nome: e.profile.nome, foto_url: e.profile.foto_url, valor: e[field] }))
+        .sort((a, b) => b.valor - a.valor)
+
+      setRankings(sorted)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setRankingLoading(false)
+    }
+  }
 
   async function fetchAll() {
     if (!id) return
@@ -330,17 +391,45 @@ export default function GrupoDetalhe() {
 
         {/* Rankings tab */}
         {tab === 'rankings' && (
-          <div className="text-center py-8">
-            <Trophy size={32} className="mx-auto mb-3 text-dourado" />
-            <h3 className="font-bold text-gray-700 mb-2">Rankings do grupo</h3>
-            <p className="text-gray-400 text-sm mb-4">
-              Jogue alguns jogos para ver os rankings aparecerem aqui!
-            </p>
+          <div>
+            {/* Sub-tabs */}
+            <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+              {([
+                { key: 'goleador', label: '⚽ Gols' },
+                { key: 'garcom', label: '🎯 Assist.' },
+                { key: 'muralha', label: '🛡️ Defesas' },
+                { key: 'vitorias', label: '🏆 Vitórias' },
+              ] as { key: TabRanking; label: string }[]).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setRankingTab(key)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold border-2 transition-colors ${
+                    rankingTab === key
+                      ? 'border-verde-campo bg-verde-claro text-verde-campo'
+                      : 'border-gray-200 text-gray-500'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {rankingLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => <div key={i} className="bg-white rounded-lg p-4 animate-pulse h-16" />)}
+              </div>
+            ) : (
+              <RankingList
+                entries={rankings}
+                unidade={rankingTab === 'goleador' ? 'gols' : rankingTab === 'garcom' ? 'assist.' : rankingTab === 'muralha' ? 'defesas' : 'vitórias'}
+              />
+            )}
+
             <button
               onClick={() => navigate(`/grupo/${id}/rankings`)}
-              className="bg-verde-campo text-white font-semibold px-6 py-3 rounded-xl hover:bg-verde-escuro transition-colors"
+              className="w-full mt-4 border-2 border-verde-campo text-verde-campo font-semibold py-3 rounded-xl hover:bg-verde-claro transition-colors"
             >
-              Ver rankings completos
+              Ver ranking global entre todos os jogadores
             </button>
           </div>
         )}

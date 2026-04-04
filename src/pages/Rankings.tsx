@@ -36,23 +36,24 @@ export default function Rankings() {
   }, [grupoId, tab, periodo])
 
   async function fetchRankings() {
-    if (!grupoId) return
+    if (!user) return
     try {
       setLoading(true)
 
-      // Fetch all confirmed players in the group's games
-      const { data: jogoIds } = await supabase
-        .from('jogos')
-        .select('id')
-        .eq('grupo_id', grupoId)
+      // Busca todos os jogos onde o usuário esteve confirmado
+      const { data: minhasConfs } = await supabase
+        .from('confirmacoes')
+        .select('jogo_id')
+        .eq('profile_id', user.id)
+        .eq('status', 'confirmado')
 
-      if (!jogoIds || jogoIds.length === 0) {
+      if (!minhasConfs || minhasConfs.length === 0) {
         setRankings([])
         setLoading(false)
         return
       }
 
-      const ids = jogoIds.map((j: { id: string }) => j.id)
+      const jogoIds = minhasConfs.map((c) => c.jogo_id)
 
       let dateFilter: Date | null = null
       if (periodo === 'mes') {
@@ -63,10 +64,11 @@ export default function Rankings() {
         dateFilter = new Date(new Date().getFullYear(), 0, 1)
       }
 
+      // Busca estatísticas de TODOS os jogadores nesses jogos
       let query = supabase
         .from('estatisticas')
         .select('*, profile:profiles(*)')
-        .in('jogo_id', ids)
+        .in('jogo_id', jogoIds)
 
       if (dateFilter) {
         query = query.gte('created_at', dateFilter.toISOString())
@@ -80,21 +82,17 @@ export default function Rankings() {
         return
       }
 
-      // Aggregate per player
-      const aggregated: Record<string, { profile: Profile; gols: number; assistencias: number; defesas: number }> = {}
+      // Agrega por jogador
+      const aggregated: Record<string, { profile: Profile; gols: number; assistencias: number; defesas: number; vitorias: number }> = {}
 
       for (const stat of statsData as (Estatistica & { profile: Profile })[]) {
         if (!aggregated[stat.profile_id]) {
-          aggregated[stat.profile_id] = {
-            profile: stat.profile,
-            gols: 0,
-            assistencias: 0,
-            defesas: 0,
-          }
+          aggregated[stat.profile_id] = { profile: stat.profile, gols: 0, assistencias: 0, defesas: 0, vitorias: 0 }
         }
         aggregated[stat.profile_id].gols += stat.gols
         aggregated[stat.profile_id].assistencias += stat.assistencias
         aggregated[stat.profile_id].defesas += stat.defesas
+        aggregated[stat.profile_id].vitorias += (stat as any).vitorias || 0
       }
 
       let sorted: RankingEntry[] = []
@@ -117,7 +115,7 @@ export default function Rankings() {
             id: e.profile.id,
             nome: e.profile.nome,
             foto_url: e.profile.foto_url,
-            valor: e.gols * 3 + e.assistencias * 2 + Math.floor(e.defesas / 3),
+            valor: e.gols * 3 + e.assistencias * 2 + e.vitorias * 2 + Math.floor(e.defesas / 3),
           }))
           .sort((a, b) => b.valor - a.valor)
       }
@@ -159,8 +157,8 @@ export default function Rankings() {
         >
           <ArrowLeft size={18} /> Voltar
         </button>
-        <h1 className="text-white text-2xl font-bold">Rankings</h1>
-        <p className="text-white/70 text-sm mt-0.5">Desempenho do grupo</p>
+        <h1 className="text-white text-2xl font-bold">Ranking global</h1>
+        <p className="text-white/70 text-sm mt-0.5">Todos os jogadores que jogaram com você</p>
       </div>
 
       {/* Tab bar */}
