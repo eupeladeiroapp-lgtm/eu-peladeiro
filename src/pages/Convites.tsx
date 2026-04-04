@@ -85,7 +85,7 @@ export default function Convites() {
         }
       }
 
-      // 2. Jogos recentes encerrados que precisam de estatísticas
+      // 2. Jogos encerrados nos últimos 3 dias onde o usuário estava confirmado
       const { data: minhasConfsRecentes } = await supabase
         .from('confirmacoes')
         .select('jogo_id')
@@ -95,16 +95,15 @@ export default function Convites() {
       if (minhasConfsRecentes && minhasConfsRecentes.length > 0) {
         const jogoIdsConf = minhasConfsRecentes.map((c) => c.jogo_id)
 
-        const seteDiasAtras = new Date()
-        seteDiasAtras.setDate(seteDiasAtras.getDate() - 7)
+        const tresDiasAtras = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
 
+        // Busca jogos encerrados — inclui todos independente de grupo (avulsos incluídos)
         const { data: jogosEncerrados } = await supabase
           .from('jogos')
           .select('*, grupo:grupos(nome)')
           .in('id', jogoIdsConf)
-          .in('status', ['encerrado', 'em_andamento'])
-          .lte('data_hora', agora)
-          .gte('data_hora', seteDiasAtras.toISOString())
+          .eq('status', 'encerrado')
+          .gte('data_hora', tresDiasAtras)
 
         if (jogosEncerrados && jogosEncerrados.length > 0) {
           const { data: minhasEsts } = await supabase
@@ -120,34 +119,33 @@ export default function Convites() {
               resultado.push({
                 tipo: 'estatistica',
                 jogo,
-                grupoNome: jogo.grupo?.nome || 'Grupo',
+                grupoNome: jogo.grupo?.nome || 'Jogo avulso',
                 grupoId: jogo.grupo_id,
               })
             }
           }
         }
 
-        // 3. Jogos recentes onde pode avaliar outros jogadores
+        // 3. Jogos encerrados nos últimos 3 dias onde pode avaliar outros jogadores
         const { data: jogosParaAvaliar } = await supabase
           .from('jogos')
           .select('*, grupo:grupos(nome)')
           .in('id', jogoIdsConf)
-          .in('status', ['encerrado', 'em_andamento'])
-          .lte('data_hora', agora)
-          .gte('data_hora', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+          .eq('status', 'encerrado')
+          .gte('data_hora', tresDiasAtras)
 
         if (jogosParaAvaliar && jogosParaAvaliar.length > 0) {
           const { data: minhasAvals } = await supabase
             .from('avaliacoes')
             .select('grupo_id')
             .eq('avaliador_id', user.id)
-            .in('grupo_id', jogosParaAvaliar.map((j) => j.grupo_id))
+            .in('grupo_id', jogosParaAvaliar.filter((j) => j.grupo_id).map((j) => j.grupo_id))
 
           const gruposAvaliados = new Set((minhasAvals || []).map((a) => a.grupo_id))
 
           for (const jogo of jogosParaAvaliar as (Jogo & { grupo: { nome: string } | null })[]) {
+            if (!jogo.grupo_id) continue // avulsos sem grupo não têm avaliação de grupo
             if (!gruposAvaliados.has(jogo.grupo_id)) {
-              // Only add if not already listed as estatistica
               const jaListado = resultado.some(
                 (r) => r.tipo === 'avaliacao' && r.jogo.grupo_id === jogo.grupo_id
               )
