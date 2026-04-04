@@ -25,6 +25,7 @@ export default function Perfil() {
   const [saving, setSaving] = useState(false)
   const [editandoHabilidades, setEditandoHabilidades] = useState(false)
   const [habilidadesEdit, setHabilidadesEdit] = useState<Record<string, number>>({})
+  const [posicoesEdit, setPosicoesEdit] = useState<Record<string, 'principal' | 'secundaria'>>({})
   const [savingHabilidades, setSavingHabilidades] = useState(false)
   const [habilidadesMedia, setHabilidadesMedia] = useState<Record<string, number>>({})
 
@@ -44,6 +45,12 @@ export default function Perfil() {
         forca: profile.habilidades?.forca ?? 5,
         velocidade: profile.habilidades?.velocidade ?? 5,
       })
+      setPosicoesEdit(
+        Object.fromEntries([
+          ...(profile.posicao_principal ? [[profile.posicao_principal, 'principal' as const]] : []),
+          ...(profile.posicoes_secundarias || []).map((p) => [p, 'secundaria' as const]),
+        ])
+      )
     }
   }, [profile])
 
@@ -107,11 +114,36 @@ export default function Perfil() {
     }
   }
 
+  function handleTogglePosicao(pos: string) {
+    setPosicoesEdit((prev) => {
+      const current = prev[pos]
+      if (!current) return { ...prev, [pos]: 'secundaria' }
+      if (current === 'secundaria') {
+        // Promote to principal, demote previous principal to secundaria
+        const updated: Record<string, 'principal' | 'secundaria'> = {}
+        for (const [k, v] of Object.entries(prev)) {
+          updated[k] = k === pos ? 'principal' : v === 'principal' ? 'secundaria' : v
+        }
+        updated[pos] = 'principal'
+        return updated
+      }
+      // Remove (was principal)
+      const updated = { ...prev }
+      delete updated[pos]
+      return updated
+    })
+  }
+
   async function handleSaveHabilidades() {
     if (!user) return
     setSavingHabilidades(true)
     try {
-      await supabase.from('profiles').update({ habilidades: habilidadesEdit }).eq('id', user.id)
+      const posicao_principal = Object.entries(posicoesEdit).find(([, v]) => v === 'principal')?.[0] ?? null
+      const posicoes_secundarias = Object.entries(posicoesEdit).filter(([, v]) => v === 'secundaria').map(([k]) => k)
+      await supabase
+        .from('profiles')
+        .update({ habilidades: habilidadesEdit, posicao_principal, posicoes_secundarias })
+        .eq('id', user.id)
       await refetchProfile()
       setEditandoHabilidades(false)
     } catch (err) {
@@ -291,11 +323,14 @@ export default function Perfil() {
       )}
 
       {/* Posições */}
-      {Object.keys(posicoes).length > 0 && (
+      {(Object.keys(posicoes).length > 0 || editandoHabilidades) && (
         <div className="px-5 mt-5">
           <h2 className="font-bold text-gray-700 mb-3">Posições</h2>
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-            <CampoFutebol selected={posicoes} onToggle={() => {}} />
+            <CampoFutebol
+              selected={editandoHabilidades ? posicoesEdit : posicoes}
+              onToggle={editandoHabilidades ? handleTogglePosicao : () => {}}
+            />
           </div>
         </div>
       )}

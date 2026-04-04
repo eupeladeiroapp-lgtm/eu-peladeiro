@@ -41,21 +41,47 @@ export default function Home() {
         .eq('profile_id', user.id)
 
       const grupoIds = (membros || []).map((m) => m.grupo_id)
-      if (grupoIds.length === 0) { setJogos([]); return }
 
-      // Busca jogos + nome do grupo
-      const { data: jogosData } = await supabase
-        .from('jogos')
-        .select('*, grupo:grupos(nome)')
-        .in('grupo_id', grupoIds)
-        .in('status', ['aberto', 'em_andamento'])
-        .gte('data_hora', new Date().toISOString())
-        .order('data_hora', { ascending: true })
-        .limit(10)
+      // Busca jogos dos grupos
+      const jogosGrupo = grupoIds.length > 0
+        ? (await supabase
+            .from('jogos')
+            .select('*, grupo:grupos(nome)')
+            .in('grupo_id', grupoIds)
+            .in('status', ['aberto', 'em_andamento'])
+            .gte('data_hora', new Date().toISOString())
+            .order('data_hora', { ascending: true })
+            .limit(10)
+          ).data || []
+        : []
 
-      if (!jogosData || jogosData.length === 0) { setJogos([]); return }
+      // Busca jogos avulsos (convidado via link)
+      const { data: confsAvulsas } = await supabase
+        .from('confirmacoes')
+        .select('jogo_id')
+        .eq('profile_id', user.id)
+        .eq('tipo_convite', 'avulso')
 
-      const jogoIds = jogosData.map((j) => j.id)
+      const jogoIdsAvulsos = (confsAvulsas || []).map((c) => c.jogo_id)
+      const grupoIdsJaVistos = new Set(jogosGrupo.map((j) => j.id))
+
+      const jogosAvulsos = jogoIdsAvulsos.length > 0
+        ? (await supabase
+            .from('jogos')
+            .select('*, grupo:grupos(nome)')
+            .in('id', jogoIdsAvulsos)
+            .in('status', ['aberto', 'em_andamento'])
+            .gte('data_hora', new Date().toISOString())
+          ).data?.filter((j) => !grupoIdsJaVistos.has(j.id)) || []
+        : []
+
+      const todosJogos = [...jogosGrupo, ...jogosAvulsos].sort(
+        (a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime()
+      ).slice(0, 10)
+
+      if (todosJogos.length === 0) { setJogos([]); return }
+
+      const jogoIds = todosJogos.map((j) => j.id)
 
       // Busca confirmações de todos os jogos
       const { data: confsData } = await supabase
@@ -64,17 +90,18 @@ export default function Home() {
         .in('jogo_id', jogoIds)
 
       // Busca total de membros por grupo
+      const allGrupoIds = [...new Set(todosJogos.map((j) => j.grupo_id))]
       const { data: membrosGrupo } = await supabase
         .from('grupo_membros')
         .select('grupo_id')
-        .in('grupo_id', grupoIds)
+        .in('grupo_id', allGrupoIds)
 
       const membrosPorGrupo: Record<string, number> = {}
       for (const m of membrosGrupo || []) {
         membrosPorGrupo[m.grupo_id] = (membrosPorGrupo[m.grupo_id] || 0) + 1
       }
 
-      const jogosComDados: JogoComDados[] = jogosData.map((jogo) => {
+      const jogosComDados: JogoComDados[] = todosJogos.map((jogo) => {
         const confsJogo = (confsData || []).filter((c) => c.jogo_id === jogo.id)
         const confirmados = confsJogo.filter((c) => c.status === 'confirmado').length
         const myConf = confsJogo.find((c) => c.profile_id === user.id)

@@ -7,9 +7,17 @@ export interface Jogador {
   nivel: number
 }
 
-export function sortearTimes(jogadores: Jogador[], numTimes: number): Jogador[][] {
+export interface ResultadoSorteio {
+  times: Jogador[][]
+  goleiroFixo: boolean // true when goalkeepers don't rotate (fewer goalkeepers than teams)
+}
+
+export function sortearTimes(jogadores: Jogador[], numTimes: number): ResultadoSorteio {
   const goleiros = jogadores.filter(j => j.posicao_principal === 'GOL')
   const outros = jogadores.filter(j => j.posicao_principal !== 'GOL')
+
+  // When fewer goalkeepers than teams, goalkeepers are fixed (no rotation)
+  const goleiroFixo = goleiros.length > 0 && goleiros.length < numTimes
 
   const times: Jogador[][] = Array.from({ length: numTimes }, () => [])
 
@@ -31,7 +39,7 @@ export function sortearTimes(jogadores: Jogador[], numTimes: number): Jogador[][
     if (timeAtual < 0) { direcao = 1; timeAtual = 0 }
   }
 
-  return times
+  return { times, goleiroFixo }
 }
 
 export function calcularNivel(

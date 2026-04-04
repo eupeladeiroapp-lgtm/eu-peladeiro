@@ -4,14 +4,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import Layout from '../components/Layout'
 import { supabase } from '../lib/supabase'
 import { Confirmacao, Jogo, Profile } from '../types'
-import { CORES_TIMES, Jogador, calcularMediaTime, sortearTimes } from '../utils/sorteio'
+import { CORES_TIMES, Jogador, ResultadoSorteio, calcularMediaTime, sortearTimes } from '../utils/sorteio'
 
 export default function JogoTimes() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [jogo, setJogo] = useState<Jogo | null>(null)
   const [jogadores, setJogadores] = useState<Jogador[]>([])
-  const [times, setTimes] = useState<Jogador[][]>([])
+  const [resultado, setResultado] = useState<ResultadoSorteio>({ times: [], goleiroFixo: false })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export default function JogoTimes() {
         )
 
         setJogadores(jogadoresData)
-        setTimes(sortearTimes(jogadoresData, jogoData.num_times || 2))
+        setResultado(sortearTimes(jogadoresData, jogoData.num_times || 2))
       }
     } catch (err) {
       console.error(err)
@@ -66,8 +66,10 @@ export default function JogoTimes() {
     if (jogadores.length === 0) return
     const shuffled = [...jogadores].sort(() => Math.random() - 0.5)
     const numTimes = jogo?.num_times || 2
-    setTimes(sortearTimes(shuffled, numTimes))
+    setResultado(sortearTimes(shuffled, numTimes))
   }
+
+  const { times, goleiroFixo } = resultado
 
   if (loading) {
     return (
@@ -119,6 +121,12 @@ export default function JogoTimes() {
           </div>
         ) : (
           <>
+            {goleiroFixo && (
+              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
+                <span className="text-lg">🧤</span>
+                <span>Goleiros fixos — não entram no revezamento entre os times.</span>
+              </div>
+            )}
             {times.map((time, idx) => {
               const corConfig = CORES_TIMES[idx % CORES_TIMES.length]
               const media = calcularMediaTime(time)
