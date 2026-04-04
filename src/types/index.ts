@@ -108,7 +108,7 @@ export interface Partida {
 export interface Notificacao {
   id: string
   profile_id: string
-  tipo: 'times_sorteados' | 'partida_encerrada'
+  tipo: 'times_sorteados' | 'partida_encerrada' | 'lembrete_estatistica'
   jogo_id: string
   lida: boolean
   created_at: string

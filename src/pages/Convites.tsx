@@ -1,4 +1,4 @@
-import { Bell, Calendar, Check, ClipboardList, Shield, Star, Trophy, X } from 'lucide-react'
+import { Bell, Calendar, Check, ClipboardList, Clock, Shield, Star, Trophy, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase'
 import { Jogo, Notificacao } from '../types'
 
 interface ItemNotificacao {
-  tipo: 'confirmacao' | 'estatistica' | 'avaliacao' | 'times_sorteados' | 'partida_encerrada'
+  tipo: 'confirmacao' | 'estatistica' | 'avaliacao' | 'times_sorteados' | 'partida_encerrada' | 'lembrete_estatistica'
   jogo: Jogo
   grupoNome: string
   grupoId?: string
@@ -162,7 +162,54 @@ export default function Convites() {
         }
       }
 
-      // 4. Notificações do banco (times_sorteados e partida_encerrada)
+      // 4. Cria lembretes automáticos para jogos 24h+ sem estatísticas registradas
+      if (minhasConfsRecentes && minhasConfsRecentes.length > 0) {
+        const jogoIdsConf = minhasConfsRecentes.map((c) => c.jogo_id)
+        const umDiaAtras = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+        const tresDiasAtras = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+
+        const { data: jogosSemStats } = await supabase
+          .from('jogos')
+          .select('id')
+          .in('id', jogoIdsConf)
+          .eq('status', 'encerrado')
+          .lte('data_hora', umDiaAtras)
+          .gte('data_hora', tresDiasAtras)
+
+        if (jogosSemStats && jogosSemStats.length > 0) {
+          const { data: statsExistentes } = await supabase
+            .from('estatisticas')
+            .select('jogo_id')
+            .eq('profile_id', user.id)
+            .in('jogo_id', jogosSemStats.map((j) => j.id))
+
+          const comStats = new Set((statsExistentes || []).map((e) => e.jogo_id))
+
+          const { data: lembreteExistentes } = await supabase
+            .from('notificacoes')
+            .select('jogo_id')
+            .eq('profile_id', user.id)
+            .eq('tipo', 'lembrete_estatistica')
+            .in('jogo_id', jogosSemStats.map((j) => j.id))
+
+          const comLembrete = new Set((lembreteExistentes || []).map((n) => n.jogo_id))
+
+          const lembretes = jogosSemStats
+            .filter((j) => !comStats.has(j.id) && !comLembrete.has(j.id))
+            .map((j) => ({
+              profile_id: user.id,
+              tipo: 'lembrete_estatistica',
+              jogo_id: j.id,
+              lida: false,
+            }))
+
+          if (lembretes.length > 0) {
+            await supabase.from('notificacoes').insert(lembretes)
+          }
+        }
+      }
+
+      // 5. Notificações do banco (times_sorteados, partida_encerrada, lembrete_estatistica)
       const { data: notifs } = await supabase
         .from('notificacoes')
         .select('*, jogo:jogos(*, grupo:grupos(nome))')
@@ -229,6 +276,7 @@ export default function Convites() {
   const avaliacoes = itens.filter((i) => i.tipo === 'avaliacao')
   const timesSorteados = itens.filter((i) => i.tipo === 'times_sorteados')
   const partidasEncerradas = itens.filter((i) => i.tipo === 'partida_encerrada')
+  const lembretes = itens.filter((i) => i.tipo === 'lembrete_estatistica')
   const total = itens.length
 
   return (
@@ -434,6 +482,38 @@ export default function Convites() {
                           Avaliar jogadores
                         </button>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Lembretes de estatísticas pendentes */}
+            {lembretes.length > 0 && (
+              <div>
+                <h2 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <Clock size={16} className="text-orange-500" />
+                  Lembrete — registre suas realizações
+                </h2>
+                <div className="space-y-3">
+                  {lembretes.map(({ jogo, grupoNome, notificacaoId }) => (
+                    <div key={`lem-${jogo.id}`} className="bg-orange-50 rounded-xl border border-orange-200 shadow-sm p-4">
+                      <p className="text-xs font-semibold text-orange-400 uppercase tracking-wide mb-0.5">
+                        {grupoNome}
+                      </p>
+                      <p className="font-bold text-gray-800 mb-1">{jogo.formato}</p>
+                      <p className="text-sm text-gray-500 mb-1 capitalize">
+                        {formatDate(jogo.data_hora)} · {formatTime(jogo.data_hora)}
+                      </p>
+                      <p className="text-xs text-orange-500 mb-3">Você ainda não registrou suas realizações!</p>
+                      <button
+                        onClick={async () => {
+                          if (notificacaoId) await marcarComoLida(notificacaoId)
+                          navigate(`/jogo/${jogo.id}/registro`)
+                        }}
+                        className="w-full bg-orange-500 text-white font-semibold py-2.5 rounded-xl text-sm"
+                      >
+                        Registrar agora
+                      </button>
                     </div>
                   ))}
                 </div>
