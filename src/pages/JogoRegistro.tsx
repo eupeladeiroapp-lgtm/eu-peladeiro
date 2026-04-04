@@ -64,31 +64,35 @@ export default function JogoRegistro() {
     try {
       setLoading(true)
 
-      const { data: confsData } = await supabase
+      const { data: confData } = await supabase
         .from('confirmacoes')
         .select('*, profile:profiles(*)')
         .eq('jogo_id', id)
+        .eq('profile_id', user!.id)
         .eq('status', 'confirmado')
+        .single()
+
+      if (!confData) {
+        setJogadores([])
+        return
+      }
 
       const { data: statsData } = await supabase
         .from('estatisticas')
         .select('*')
         .eq('jogo_id', id)
+        .eq('profile_id', user!.id)
+        .single()
 
-      const jogadoresStats: JogadorStats[] = ((confsData as (Confirmacao & { profile: Profile })[]) || []).map(
-        (conf) => {
-          const stats = (statsData as Estatistica[])?.find((s) => s.profile_id === conf.profile_id)
-          return {
-            profile: conf.profile,
-            gols: stats?.gols || 0,
-            assistencias: stats?.assistencias || 0,
-            defesas: stats?.defesas || 0,
-            vitorias: (stats as any)?.vitorias || 0,
-          }
-        }
-      )
-
-      setJogadores(jogadoresStats)
+      const conf = confData as Confirmacao & { profile: Profile }
+      const stats = statsData as Estatistica | null
+      setJogadores([{
+        profile: conf.profile,
+        gols: stats?.gols || 0,
+        assistencias: stats?.assistencias || 0,
+        defesas: stats?.defesas || 0,
+        vitorias: (stats as any)?.vitorias || 0,
+      }])
     } catch (err) {
       console.error(err)
     } finally {
@@ -157,8 +161,8 @@ export default function JogoRegistro() {
         >
           <ArrowLeft size={18} /> Voltar
         </button>
-        <h1 className="text-white text-2xl font-bold">Registrar estatísticas</h1>
-        <p className="text-white/70 text-sm mt-0.5">{jogadores.length} jogadores confirmados</p>
+        <h1 className="text-white text-2xl font-bold">Minhas realizações</h1>
+        <p className="text-white/70 text-sm mt-0.5">Registre suas estatísticas da partida</p>
       </div>
 
       <div className="px-5 py-5">
@@ -170,8 +174,8 @@ export default function JogoRegistro() {
           </div>
         ) : jogadores.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
-            <p className="text-4xl mb-2">👥</p>
-            <p className="font-medium">Nenhum jogador confirmado</p>
+            <p className="text-4xl mb-2">⚽</p>
+            <p className="font-medium">Você não estava confirmado neste jogo.</p>
           </div>
         ) : (
           <div className="space-y-4">
