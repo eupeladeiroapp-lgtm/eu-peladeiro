@@ -26,9 +26,11 @@ export default function Perfil() {
   const [editandoHabilidades, setEditandoHabilidades] = useState(false)
   const [habilidadesEdit, setHabilidadesEdit] = useState<Record<string, number>>({})
   const [savingHabilidades, setSavingHabilidades] = useState(false)
+  const [habilidadesMedia, setHabilidadesMedia] = useState<Record<string, number>>({})
 
   useEffect(() => {
     fetchStats()
+    if (user) fetchHabilidadesMedia()
   }, [user])
 
   useEffect(() => {
@@ -44,6 +46,26 @@ export default function Perfil() {
       })
     }
   }, [profile])
+
+  async function fetchHabilidadesMedia() {
+    if (!user) return
+    const skills = ['chute', 'drible', 'passe', 'defesa', 'forca', 'velocidade']
+    const { data } = await supabase
+      .from('avaliacoes')
+      .select('habilidades')
+      .eq('avaliado_id', user.id)
+
+    const avaliacoes = (data || []).map((a) => a.habilidades as Record<string, number>)
+    if (avaliacoes.length === 0) return
+
+    const media: Record<string, number> = {}
+    for (const skill of skills) {
+      const auto = profile?.habilidades?.[skill as keyof typeof profile.habilidades] ?? 5
+      const notas = [...avaliacoes.map((a) => a[skill] ?? 5), auto]
+      media[skill] = Math.round((notas.reduce((a, b) => a + b, 0) / notas.length) * 10) / 10
+    }
+    setHabilidadesMedia(media)
+  }
 
   async function fetchStats() {
     if (!user) return
@@ -212,37 +234,45 @@ export default function Perfil() {
           </div>
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
             {SKILLS.map(({ key, label, emoji }) => {
-              const value = editandoHabilidades
-                ? (habilidadesEdit[key] ?? 5)
-                : (profile.habilidades?.[key as keyof typeof profile.habilidades] || 5)
+              const autoValor = profile.habilidades?.[key as keyof typeof profile.habilidades] ?? 5
+              const mediaValor = habilidadesMedia[key] ?? autoValor
+              const value = editandoHabilidades ? (habilidadesEdit[key] ?? 5) : mediaValor
+              const temAvaliacao = Object.keys(habilidadesMedia).length > 0
               return (
-                <div key={key} className="flex items-center gap-3">
-                  <span className="text-lg w-6">{emoji}</span>
-                  <span className="text-sm font-medium text-gray-700 w-20">{label}</span>
-                  {editandoHabilidades ? (
-                    <>
-                      <input
-                        type="range"
-                        min={1}
-                        max={10}
-                        value={value}
-                        onChange={(e) =>
-                          setHabilidadesEdit((prev) => ({ ...prev, [key]: parseInt(e.target.value) }))
-                        }
-                        className="flex-1"
-                      />
-                      <span className="text-sm font-bold text-verde-campo w-4">{value}</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-verde-campo rounded-full transition-all duration-500"
-                          style={{ width: `${value * 10}%` }}
+                <div key={key}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg w-6">{emoji}</span>
+                    <span className="text-sm font-medium text-gray-700 w-20">{label}</span>
+                    {editandoHabilidades ? (
+                      <>
+                        <input
+                          type="range"
+                          min={1}
+                          max={10}
+                          value={habilidadesEdit[key] ?? 5}
+                          onChange={(e) =>
+                            setHabilidadesEdit((prev) => ({ ...prev, [key]: parseInt(e.target.value) }))
+                          }
+                          className="flex-1"
                         />
-                      </div>
-                      <span className="text-sm font-bold text-verde-campo w-4">{value}</span>
-                    </>
+                        <span className="text-sm font-bold text-verde-campo w-4">{habilidadesEdit[key] ?? 5}</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-verde-campo rounded-full transition-all duration-500"
+                            style={{ width: `${value * 10}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-bold text-verde-campo w-6 text-right">{value}</span>
+                      </>
+                    )}
+                  </div>
+                  {!editandoHabilidades && temAvaliacao && mediaValor !== autoValor && (
+                    <p className="text-xs text-gray-400 ml-8 mt-0.5">
+                      Sua nota: {autoValor} · Média do grupo: {mediaValor}
+                    </p>
                   )}
                 </div>
               )
