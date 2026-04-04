@@ -14,6 +14,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [totalGrupos, setTotalGrupos] = useState(0)
   const [golsMes, setGolsMes] = useState(0)
+  const [defesasMes, setDefesasMes] = useState(0)
   const [showFAB, setShowFAB] = useState(false)
 
   useEffect(() => {
@@ -67,13 +68,16 @@ export default function Home() {
     inicioMes.setHours(0, 0, 0, 0)
     const { data: stats } = await supabase
       .from('estatisticas')
-      .select('gols')
+      .select('gols, defesas')
       .eq('profile_id', user.id)
       .gte('created_at', inicioMes.toISOString())
-    const total = (stats || []).reduce((sum, s) => sum + (s.gols || 0), 0)
-    setGolsMes(total)
+    const totalGols = (stats || []).reduce((sum, s) => sum + (s.gols || 0), 0)
+    const totalDefesas = (stats || []).reduce((sum, s) => sum + (s.defesas || 0), 0)
+    setGolsMes(totalGols)
+    setDefesasMes(totalDefesas)
   }
 
+  const isGoleiro = profile?.posicao_principal === 'GOL'
   const nome = profile?.nome || user?.user_metadata?.full_name || 'Peladeiro'
   const primeiroNome = nome.split(' ')[0]
   const avatarUrl = profile?.foto_url || user?.user_metadata?.avatar_url || null
@@ -114,7 +118,9 @@ export default function Home() {
           {[
             { label: 'Próximos jogos', value: jogos.length, icon: '⚽' },
             { label: 'Grupos', value: totalGrupos, icon: '👥' },
-            { label: 'Gols no mês', value: golsMes, icon: '🥅' },
+            isGoleiro
+              ? { label: 'Defesas no mês', value: defesasMes, icon: '🛡️' }
+              : { label: 'Gols no mês', value: golsMes, icon: '🥅' },
           ].map((stat) => (
             <div key={stat.label} className="bg-white/15 rounded-lg p-3 text-center">
               <p className="text-xl">{stat.icon}</p>

@@ -36,6 +36,7 @@ export interface Jogo {
   id: string
   grupo_id: string
   data_hora: string
+  hora_fim?: string | null
   local: string | null
   formato: string
   num_times: number

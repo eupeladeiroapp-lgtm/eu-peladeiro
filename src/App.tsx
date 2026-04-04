@@ -16,6 +16,7 @@ import Rankings from './pages/Rankings'
 import Perfil from './pages/Perfil'
 import Convites from './pages/Convites'
 import Sobre from './pages/Sobre'
+import AvaliacaoHabilidades from './pages/AvaliacaoHabilidades'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading, profile, profileLoading } = useAuth()
@@ -134,6 +135,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Sobre />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/grupo/:id/avaliar"
+        element={
+          <ProtectedRoute>
+            <AvaliacaoHabilidades />
           </ProtectedRoute>
         }
       />

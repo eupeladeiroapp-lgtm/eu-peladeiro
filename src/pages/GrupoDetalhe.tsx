@@ -1,4 +1,4 @@
-import { ArrowLeft, Calendar, Crown, Plus, Share2, Trophy, User, Users, X } from 'lucide-react'
+import { ArrowLeft, Calendar, Crown, Plus, Share2, Shuffle, Trophy, User, Users, X } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import CardJogo from '../components/CardJogo'
@@ -19,6 +19,7 @@ export default function GrupoDetalhe() {
   const [grupo, setGrupo] = useState<Grupo | null>(null)
   const [membros, setMembros] = useState<(GrupoMembro & { profile: Profile })[]>([])
   const [jogos, setJogos] = useState<Jogo[]>([])
+  const [confirmadosPorJogo, setConfirmadosPorJogo] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<TabType>('membros')
   const [showCreateJogo, setShowCreateJogo] = useState(false)
@@ -27,6 +28,7 @@ export default function GrupoDetalhe() {
 
   const [jogoData, setJogoData] = useState('')
   const [jogoHora, setJogoHora] = useState('19:00')
+  const [jogoHoraFim, setJogoHoraFim] = useState('')
   const [jogoLocal, setJogoLocal] = useState('')
   const [jogoFormato, setJogoFormato] = useState('7x7')
   const [jogoNumTimes, setJogoNumTimes] = useState(2)
@@ -61,7 +63,23 @@ export default function GrupoDetalhe() {
         .eq('grupo_id', id)
         .order('data_hora', { ascending: false })
 
-      setJogos((jogosData as Jogo[]) || [])
+      const jogosList = (jogosData as Jogo[]) || []
+      setJogos(jogosList)
+
+      if (jogosList.length > 0) {
+        const jogoIds = jogosList.map((j) => j.id)
+        const { data: confsData } = await supabase
+          .from('confirmacoes')
+          .select('jogo_id')
+          .in('jogo_id', jogoIds)
+          .eq('status', 'confirmado')
+
+        const counts: Record<string, number> = {}
+        for (const c of confsData || []) {
+          counts[c.jogo_id] = (counts[c.jogo_id] || 0) + 1
+        }
+        setConfirmadosPorJogo(counts)
+      }
     } catch (err) {
       console.error(err)
     } finally {
@@ -78,14 +96,17 @@ export default function GrupoDetalhe() {
     setCreating(true)
     setError(null)
     try {
+      const jogoId = crypto.randomUUID()
       const dataHora = new Date(`${jogoData}T${jogoHora}:00`)
       const token = crypto.randomUUID().replace(/-/g, '').substring(0, 12)
 
       const { error: jogoError } = await supabase
         .from('jogos')
         .insert({
+          id: jogoId,
           grupo_id: id,
           data_hora: dataHora.toISOString(),
+          hora_fim: jogoHoraFim || null,
           local: jogoLocal.trim() || null,
           formato: jogoFormato,
           num_times: jogoNumTimes,
@@ -96,6 +117,18 @@ export default function GrupoDetalhe() {
 
       if (jogoError) throw jogoError
 
+      // Auto-confirm all group members
+      const membrosParaConfirmar = membros.map((m) => ({
+        jogo_id: jogoId,
+        profile_id: m.profile_id,
+        status: 'confirmado',
+        tipo_convite: 'fixo',
+      }))
+
+      if (membrosParaConfirmar.length > 0) {
+        await supabase.from('confirmacoes').upsert(membrosParaConfirmar)
+      }
+
       setShowCreateJogo(false)
       navigate(`/jogo/${token}`)
     } catch (err: unknown) {
@@ -103,6 +136,17 @@ export default function GrupoDetalhe() {
       setError(msg)
     } finally {
       setCreating(false)
+    }
+  }
+
+  function handleConvidarJogo(jogo: Jogo) {
+    const link = `${window.location.origin}/jogo/${jogo.link_token}`
+    const texto = `Confirma presença na pelada? ${grupo?.nome || ''} — ${new Date(jogo.data_hora).toLocaleDateString('pt-BR')} às ${new Date(jogo.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}\n${link}`
+    if (navigator.share) {
+      navigator.share({ title: 'Eu Peladeiro', text: texto, url: link })
+    } else {
+      const whatsapp = `https://wa.me/?text=${encodeURIComponent(texto)}`
+      window.open(whatsapp, '_blank')
     }
   }
 
@@ -161,7 +205,7 @@ export default function GrupoDetalhe() {
         ))}
       </div>
 
-      <div className="px-5 py-5">
+      <div className="px-5 py-5 pb-32">
         {/* Membros tab */}
         {tab === 'membros' && (
           <div className="space-y-3">
@@ -180,6 +224,14 @@ export default function GrupoDetalhe() {
             >
               <Share2 size={18} /> Convidar jogadores
             </button>
+
+            <button
+              onClick={() => navigate(`/grupo/${id}/avaliar`)}
+              className="w-full flex items-center justify-center gap-2 bg-white border-2 border-verde-campo text-verde-campo font-semibold py-3 rounded-xl hover:bg-verde-claro transition-colors"
+            >
+              ⭐ Avaliar jogadores
+            </button>
+
             {loading ? (
               [1, 2, 3].map((i) => (
                 <div key={i} className="bg-white rounded-lg p-4 animate-pulse h-16" />
@@ -238,15 +290,32 @@ export default function GrupoDetalhe() {
                 ))}
               </div>
             ) : jogos.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {jogos.map((jogo) => (
-                  <CardJogo
-                    key={jogo.id}
-                    jogo={jogo}
-                    confirmados={0}
-                    totalVagas={parseInt(jogo.formato) * 2 || 14}
-                    onClick={() => navigate(`/jogo/${jogo.link_token}`)}
-                  />
+                  <div key={jogo.id} className="space-y-2">
+                    <CardJogo
+                      jogo={jogo}
+                      confirmados={confirmadosPorJogo[jogo.id] || 0}
+                      totalVagas={parseInt(jogo.formato) * 2 || 14}
+                      onClick={() => navigate(`/jogo/${jogo.link_token}`)}
+                    />
+                    <div className="flex gap-2 px-1">
+                      <button
+                        onClick={() => handleConvidarJogo(jogo)}
+                        className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <Share2 size={14} /> Convidar para este jogo
+                      </button>
+                      {isAdmin && jogo.status === 'aberto' && (
+                        <button
+                          onClick={() => navigate(`/jogo/${jogo.id}/times`)}
+                          className="flex-1 flex items-center justify-center gap-1.5 bg-verde-campo text-white text-sm font-semibold py-2 rounded-lg hover:bg-verde-escuro transition-colors"
+                        >
+                          <Shuffle size={14} /> Sortear times
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : (
@@ -304,7 +373,7 @@ export default function GrupoDetalhe() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Horário</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Horário início</label>
                   <input
                     type="time"
                     value={jogoHora}
@@ -312,6 +381,16 @@ export default function GrupoDetalhe() {
                     className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-verde-campo text-sm"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Horário fim (opcional)</label>
+                <input
+                  type="time"
+                  value={jogoHoraFim}
+                  onChange={(e) => setJogoHoraFim(e.target.value)}
+                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-verde-campo text-sm"
+                />
               </div>
 
               <div>

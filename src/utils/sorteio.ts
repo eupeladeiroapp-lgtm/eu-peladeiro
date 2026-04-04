@@ -8,16 +8,29 @@ export interface Jogador {
 }
 
 export function sortearTimes(jogadores: Jogador[], numTimes: number): Jogador[][] {
-  const ordenados = [...jogadores].sort((a, b) => b.nivel - a.nivel)
+  const goleiros = jogadores.filter(j => j.posicao_principal === 'GOL')
+  const outros = jogadores.filter(j => j.posicao_principal !== 'GOL')
+
   const times: Jogador[][] = Array.from({ length: numTimes }, () => [])
+
+  // Distribute goalkeepers first (one per team if possible)
+  const goleirosOrdenados = [...goleiros].sort((a, b) => b.nivel - a.nivel)
+  goleirosOrdenados.forEach((gol, i) => {
+    times[i % numTimes].push(gol)
+  })
+
+  // Distribute rest by snake draft
+  const outrosOrdenados = [...outros].sort((a, b) => b.nivel - a.nivel)
+
   let direcao = 1
   let timeAtual = 0
-  for (const jogador of ordenados) {
+  for (const jogador of outrosOrdenados) {
     times[timeAtual].push(jogador)
     timeAtual += direcao
     if (timeAtual >= numTimes) { direcao = -1; timeAtual = numTimes - 1 }
     if (timeAtual < 0) { direcao = 1; timeAtual = 0 }
   }
+
   return times
 }
 
@@ -26,16 +39,13 @@ export function calcularNivel(
   avaliacoes: Array<Record<string, number>>
 ): number {
   const skills = ['chute', 'drible', 'passe', 'defesa', 'forca', 'velocidade']
-  if (avaliacoes.length === 0) {
-    return skills.reduce((sum, h) => sum + (habilidades[h] || 5), 0) / skills.length
-  }
-  const mediaGrupo =
-    avaliacoes.reduce((sum, av) => {
-      const mediaAv = skills.reduce((s, h) => s + (av[h] || 5), 0) / skills.length
-      return sum + mediaAv
-    }, 0) / avaliacoes.length
-  const mediaAuto = skills.reduce((sum, h) => sum + (habilidades[h] || 5), 0) / skills.length
-  return mediaGrupo * 0.7 + mediaAuto * 0.3
+  const autoMedia = skills.reduce((sum, h) => sum + (habilidades[h] || 5), 0) / skills.length
+  if (avaliacoes.length === 0) return autoMedia
+  const todasNotas = [
+    ...avaliacoes.map(av => skills.reduce((sum, h) => sum + (av[h] || 5), 0) / skills.length),
+    autoMedia
+  ]
+  return todasNotas.reduce((a, b) => a + b, 0) / todasNotas.length
 }
 
 export function calcularMediaTime(jogadores: Jogador[]): number {

@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import CampoFutebol from '../components/CampoFutebol'
 import Layout from '../components/Layout'
 import { useAuth } from '../hooks/useAuth'
-import { useProfile } from '../hooks/useProfile'
 import { supabase } from '../lib/supabase'
 import { Estatistica } from '../types'
 
@@ -19,19 +18,31 @@ const SKILLS = [
 
 export default function Perfil() {
   const navigate = useNavigate()
-  const { user, signOut } = useAuth()
-  const { profile, refetch } = useProfile()
+  const { user, signOut, profile, refetchProfile } = useAuth()
   const [stats, setStats] = useState({ jogos: 0, gols: 0, assistencias: 0, defesas: 0 })
   const [editing, setEditing] = useState(false)
   const [editNome, setEditNome] = useState('')
   const [saving, setSaving] = useState(false)
+  const [editandoHabilidades, setEditandoHabilidades] = useState(false)
+  const [habilidadesEdit, setHabilidadesEdit] = useState<Record<string, number>>({})
+  const [savingHabilidades, setSavingHabilidades] = useState(false)
 
   useEffect(() => {
     fetchStats()
   }, [user])
 
   useEffect(() => {
-    if (profile) setEditNome(profile.nome)
+    if (profile) {
+      setEditNome(profile.nome)
+      setHabilidadesEdit({
+        chute: profile.habilidades?.chute ?? 5,
+        drible: profile.habilidades?.drible ?? 5,
+        passe: profile.habilidades?.passe ?? 5,
+        defesa: profile.habilidades?.defesa ?? 5,
+        forca: profile.habilidades?.forca ?? 5,
+        velocidade: profile.habilidades?.velocidade ?? 5,
+      })
+    }
   }, [profile])
 
   async function fetchStats() {
@@ -65,12 +76,26 @@ export default function Perfil() {
     setSaving(true)
     try {
       await supabase.from('profiles').update({ nome: editNome.trim() }).eq('id', user.id)
-      await refetch()
+      await refetchProfile()
       setEditing(false)
     } catch (err) {
       console.error(err)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleSaveHabilidades() {
+    if (!user) return
+    setSavingHabilidades(true)
+    try {
+      await supabase.from('profiles').update({ habilidades: habilidadesEdit }).eq('id', user.id)
+      await refetchProfile()
+      setEditandoHabilidades(false)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSavingHabilidades(false)
     }
   }
 
@@ -176,24 +201,61 @@ export default function Perfil() {
       {/* Habilidades */}
       {profile?.habilidades && (
         <div className="px-5 mt-5">
-          <h2 className="font-bold text-gray-700 mb-3">Habilidades</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold text-gray-700">Habilidades</h2>
+            <button
+              onClick={() => setEditandoHabilidades((v) => !v)}
+              className="text-sm font-semibold text-verde-campo hover:text-verde-escuro transition-colors"
+            >
+              {editandoHabilidades ? 'Cancelar' : 'Editar habilidades'}
+            </button>
+          </div>
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
             {SKILLS.map(({ key, label, emoji }) => {
-              const value = profile.habilidades[key as keyof typeof profile.habilidades] || 5
+              const value = editandoHabilidades
+                ? (habilidadesEdit[key] ?? 5)
+                : (profile.habilidades[key as keyof typeof profile.habilidades] || 5)
               return (
                 <div key={key} className="flex items-center gap-3">
                   <span className="text-lg w-6">{emoji}</span>
                   <span className="text-sm font-medium text-gray-700 w-20">{label}</span>
-                  <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-verde-campo rounded-full transition-all duration-500"
-                      style={{ width: `${value * 10}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-bold text-verde-campo w-4">{value}</span>
+                  {editandoHabilidades ? (
+                    <>
+                      <input
+                        type="range"
+                        min={1}
+                        max={10}
+                        value={value}
+                        onChange={(e) =>
+                          setHabilidadesEdit((prev) => ({ ...prev, [key]: parseInt(e.target.value) }))
+                        }
+                        className="flex-1"
+                      />
+                      <span className="text-sm font-bold text-verde-campo w-4">{value}</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-verde-campo rounded-full transition-all duration-500"
+                          style={{ width: `${value * 10}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-bold text-verde-campo w-4">{value}</span>
+                    </>
+                  )}
                 </div>
               )
             })}
+            {editandoHabilidades && (
+              <button
+                onClick={handleSaveHabilidades}
+                disabled={savingHabilidades}
+                className="w-full bg-verde-campo text-white font-bold py-3 rounded-xl hover:bg-verde-escuro transition-colors disabled:opacity-60 mt-2"
+              >
+                {savingHabilidades ? 'Salvando...' : 'Salvar habilidades'}
+              </button>
+            )}
           </div>
         </div>
       )}
