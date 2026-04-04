@@ -108,7 +108,7 @@ export default function JogoAoVivo() {
   }
 
   async function handleEncerrarPartida() {
-    if (!partida) return
+    if (!partida || !id) return
     setSaving(true)
     try {
       await supabase
@@ -129,6 +129,25 @@ export default function JogoAoVivo() {
 
       if (timePerdedor) {
         await supabase.from('times').update({ status: 'aguardando' }).eq('id', timePerdedor)
+      }
+
+      // Marca jogo como encerrado e notifica todos os jogadores
+      await supabase.from('jogos').update({ status: 'encerrado' }).eq('id', id)
+
+      const { data: confs } = await supabase
+        .from('confirmacoes')
+        .select('profile_id')
+        .eq('jogo_id', id)
+        .eq('status', 'confirmado')
+
+      if (confs && confs.length > 0) {
+        const notificacoes = confs.map((c) => ({
+          profile_id: c.profile_id,
+          tipo: 'partida_encerrada',
+          jogo_id: id,
+          lida: false,
+        }))
+        await supabase.from('notificacoes').insert(notificacoes)
       }
 
       fetchData()

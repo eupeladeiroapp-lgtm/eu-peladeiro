@@ -1,4 +1,4 @@
-import { ArrowLeft, RefreshCw, Shuffle } from 'lucide-react'
+import { ArrowLeft, CheckCircle, RefreshCw, Shuffle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Layout from '../components/Layout'
@@ -13,6 +13,7 @@ export default function JogoTimes() {
   const [jogadores, setJogadores] = useState<Jogador[]>([])
   const [resultado, setResultado] = useState<ResultadoSorteio>({ times: [], goleiroFixo: false })
   const [loading, setLoading] = useState(true)
+  const [confirmando, setConfirmando] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -67,6 +68,62 @@ export default function JogoTimes() {
     const shuffled = [...jogadores].sort(() => Math.random() - 0.5)
     const numTimes = jogo?.num_times || 2
     setResultado(sortearTimes(shuffled, numTimes))
+  }
+
+  async function handleConfirmarSorteio() {
+    if (!id || resultado.times.length === 0) return
+    setConfirmando(true)
+    try {
+      // Remove times anteriores deste jogo
+      await supabase.from('time_jogadores').delete().in(
+        'time_id',
+        (await supabase.from('times').select('id').eq('jogo_id', id)).data?.map((t) => t.id) || []
+      )
+      await supabase.from('times').delete().eq('jogo_id', id)
+
+      // Salva os novos times
+      for (let idx = 0; idx < resultado.times.length; idx++) {
+        const corConfig = CORES_TIMES[idx % CORES_TIMES.length]
+        const { data: timeData } = await supabase
+          .from('times')
+          .insert({
+            jogo_id: id,
+            nome: `Time ${corConfig.nome}`,
+            cor: corConfig.cor,
+            ordem_fila: idx,
+            status: idx < 2 ? 'jogando' : 'aguardando',
+          })
+          .select()
+          .single()
+
+        if (timeData) {
+          const timeJogadores = resultado.times[idx].map((j) => ({
+            time_id: timeData.id,
+            profile_id: j.id,
+            posicao_alocada: j.posicao_principal,
+          }))
+          await supabase.from('time_jogadores').insert(timeJogadores)
+        }
+      }
+
+      // Atualiza status do jogo
+      await supabase.from('jogos').update({ status: 'em_andamento' }).eq('id', id)
+
+      // Cria notificações para todos os jogadores confirmados
+      const notificacoes = jogadores.map((j) => ({
+        profile_id: j.id,
+        tipo: 'times_sorteados',
+        jogo_id: id,
+        lida: false,
+      }))
+      await supabase.from('notificacoes').insert(notificacoes)
+
+      navigate(`/jogo/${id}/registro`)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setConfirmando(false)
+    }
   }
 
   const { times, goleiroFixo } = resultado
@@ -199,7 +256,8 @@ export default function JogoTimes() {
 
             <button
               onClick={handleSortearNovamente}
-              className="w-full flex items-center justify-center gap-2 border-2 border-verde-campo text-verde-campo font-semibold py-4 rounded-xl hover:bg-verde-claro transition-colors"
+              disabled={confirmando}
+              className="w-full flex items-center justify-center gap-2 border-2 border-verde-campo text-verde-campo font-semibold py-4 rounded-xl hover:bg-verde-claro transition-colors disabled:opacity-50"
             >
               <RefreshCw size={18} />
               Sortear novamente
@@ -207,10 +265,12 @@ export default function JogoTimes() {
 
             {jogo && (
               <button
-                onClick={() => navigate(`/jogo/${id}/ao-vivo`)}
-                className="w-full bg-verde-campo text-white font-bold py-4 rounded-xl hover:bg-verde-escuro transition-colors"
+                onClick={handleConfirmarSorteio}
+                disabled={confirmando}
+                className="w-full flex items-center justify-center gap-2 bg-verde-campo text-white font-bold py-4 rounded-xl hover:bg-verde-escuro transition-colors disabled:opacity-60"
               >
-                Iniciar jogo ao vivo ⚽
+                <CheckCircle size={18} />
+                {confirmando ? 'Confirmando...' : 'Confirmar sorteio e registrar realizações'}
               </button>
             )}
           </>

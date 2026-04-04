@@ -1,16 +1,17 @@
-import { Bell, Calendar, Check, ClipboardList, Star, X } from 'lucide-react'
+import { Bell, Calendar, Check, ClipboardList, Shield, Star, Trophy, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
-import { Jogo } from '../types'
+import { Jogo, Notificacao } from '../types'
 
 interface ItemNotificacao {
-  tipo: 'confirmacao' | 'estatistica' | 'avaliacao'
+  tipo: 'confirmacao' | 'estatistica' | 'avaliacao' | 'times_sorteados' | 'partida_encerrada'
   jogo: Jogo
   grupoNome: string
   grupoId?: string
+  notificacaoId?: string
 }
 
 function formatDate(dateStr: string) {
@@ -163,6 +164,27 @@ export default function Convites() {
         }
       }
 
+      // 4. Notificações do banco (times_sorteados e partida_encerrada)
+      const { data: notifs } = await supabase
+        .from('notificacoes')
+        .select('*, jogo:jogos(*, grupo:grupos(nome))')
+        .eq('profile_id', user.id)
+        .eq('lida', false)
+        .order('created_at', { ascending: false })
+
+      if (notifs && notifs.length > 0) {
+        for (const notif of notifs as (Notificacao & { jogo: Jogo & { grupo: { nome: string } | null } | null })[]) {
+          if (!notif.jogo) continue
+          resultado.push({
+            tipo: notif.tipo,
+            jogo: notif.jogo,
+            grupoNome: notif.jogo.grupo?.nome || 'Grupo',
+            grupoId: notif.jogo.grupo_id,
+            notificacaoId: notif.id,
+          })
+        }
+      }
+
       setItens(resultado)
     } catch (err) {
       console.error(err)
@@ -170,6 +192,10 @@ export default function Convites() {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function marcarComoLida(notificacaoId: string) {
+    await supabase.from('notificacoes').update({ lida: true }).eq('id', notificacaoId)
   }
 
   async function handleConfirmar(jogoId: string) {
@@ -203,6 +229,8 @@ export default function Convites() {
   const confirmacoes = itens.filter((i) => i.tipo === 'confirmacao')
   const estatisticas = itens.filter((i) => i.tipo === 'estatistica')
   const avaliacoes = itens.filter((i) => i.tipo === 'avaliacao')
+  const timesSorteados = itens.filter((i) => i.tipo === 'times_sorteados')
+  const partidasEncerradas = itens.filter((i) => i.tipo === 'partida_encerrada')
   const total = itens.length
 
   return (
@@ -332,6 +360,82 @@ export default function Convites() {
                       >
                         Avaliar jogadores
                       </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Times sorteados */}
+            {timesSorteados.length > 0 && (
+              <div>
+                <h2 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <Shield size={16} className="text-verde-campo" />
+                  Times sorteados
+                </h2>
+                <div className="space-y-3">
+                  {timesSorteados.map(({ jogo, grupoNome, notificacaoId }) => (
+                    <div key={`ts-${jogo.id}`} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+                        {grupoNome}
+                      </p>
+                      <p className="font-bold text-gray-800 mb-1">{jogo.formato}</p>
+                      <p className="text-sm text-gray-500 mb-3 capitalize">
+                        {formatDate(jogo.data_hora)} · {formatTime(jogo.data_hora)}
+                      </p>
+                      <button
+                        onClick={async () => {
+                          if (notificacaoId) await marcarComoLida(notificacaoId)
+                          navigate(`/jogo/${jogo.id}/times`)
+                        }}
+                        className="w-full bg-verde-campo text-white font-semibold py-2.5 rounded-xl text-sm"
+                      >
+                        Confira sua escalação ⚽
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Partidas encerradas */}
+            {partidasEncerradas.length > 0 && (
+              <div>
+                <h2 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <Trophy size={16} className="text-purple-500" />
+                  Partida encerrada
+                </h2>
+                <div className="space-y-3">
+                  {partidasEncerradas.map(({ jogo, grupoNome, grupoId, notificacaoId }) => (
+                    <div key={`pe-${jogo.id}`} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+                        {grupoNome}
+                      </p>
+                      <p className="font-bold text-gray-800 mb-1">{jogo.formato}</p>
+                      <p className="text-sm text-gray-500 mb-1 capitalize">
+                        {formatDate(jogo.data_hora)} · {formatTime(jogo.data_hora)}
+                      </p>
+                      <p className="text-xs text-gray-400 mb-3">Registre seus gols, assistências e avalie os jogadores!</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={async () => {
+                            if (notificacaoId) await marcarComoLida(notificacaoId)
+                            navigate(`/jogo/${jogo.id}/registro`)
+                          }}
+                          className="flex-1 bg-purple-500 text-white font-semibold py-2.5 rounded-xl text-sm"
+                        >
+                          Registrar realizações
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (notificacaoId) await marcarComoLida(notificacaoId)
+                            navigate(`/grupo/${grupoId}/avaliar`)
+                          }}
+                          className="flex-1 bg-amber-500 text-white font-semibold py-2.5 rounded-xl text-sm"
+                        >
+                          Avaliar jogadores
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

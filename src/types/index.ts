@@ -104,3 +104,12 @@ export interface Partida {
   iniciada_em: string
   encerrada_em: string | null
 }
+
+export interface Notificacao {
+  id: string
+  profile_id: string
+  tipo: 'times_sorteados' | 'partida_encerrada'
+  jogo_id: string
+  lida: boolean
+  created_at: string
+}

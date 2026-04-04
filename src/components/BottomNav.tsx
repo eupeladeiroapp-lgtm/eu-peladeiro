@@ -4,7 +4,7 @@ import { NavLink } from 'react-router-dom'
 const NAV_ITEMS = [
   { to: '/', icon: Home, label: 'Início', exact: true },
   { to: '/grupos', icon: Users, label: 'Grupos', exact: false },
-  { to: '/convites', icon: Bell, label: 'Convites', exact: false },
+  { to: '/convites', icon: Bell, label: 'Notificações', exact: false },
   { to: '/perfil', icon: User, label: 'Perfil', exact: false },
 ]
 
