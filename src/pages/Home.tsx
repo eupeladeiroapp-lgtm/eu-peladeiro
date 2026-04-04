@@ -49,6 +49,7 @@ export default function Home() {
         .select('*, grupo:grupos(nome)')
         .in('grupo_id', grupoIds)
         .in('status', ['aberto', 'em_andamento'])
+        .gte('data_hora', new Date().toISOString())
         .order('data_hora', { ascending: true })
         .limit(10)
 
