@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase'
 import { Jogo, Notificacao } from '../types'
 
 interface ItemNotificacao {
-  tipo: 'confirmacao' | 'estatistica' | 'avaliacao' | 'times_sorteados' | 'partida_encerrada' | 'lembrete_estatistica' | 'avaliacao_recebida'
+  tipo: 'confirmacao' | 'estatistica' | 'avaliacao' | 'times_sorteados' | 'partida_encerrada' | 'lembrete_estatistica' | 'avaliacao_recebida' | 'lembrete_confirmacao'
   jogo: Jogo
   grupoNome: string
   grupoId?: string
@@ -272,6 +272,7 @@ export default function Convites() {
   }
 
   const confirmacoes = itens.filter((i) => i.tipo === 'confirmacao')
+  const lembretesConfirmacao = itens.filter((i) => i.tipo === 'lembrete_confirmacao')
   const estatisticas = itens.filter((i) => i.tipo === 'estatistica')
   const avaliacoes = itens.filter((i) => i.tipo === 'avaliacao')
   const timesSorteados = itens.filter((i) => i.tipo === 'times_sorteados')
@@ -347,6 +348,55 @@ export default function Convites() {
                           className="px-3 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-semibold"
                         >
                           Ver
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Lembretes de confirmação (24h antes) */}
+            {lembretesConfirmacao.length > 0 && (
+              <div>
+                <h2 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <Bell size={16} className="text-red-500" />
+                  Confirme sua presença!
+                </h2>
+                <div className="space-y-3">
+                  {lembretesConfirmacao.map(({ jogo, grupoNome, notificacaoId }) => (
+                    <div key={`lc-${jogo.id}`} className="bg-red-50 rounded-xl border border-red-200 shadow-sm p-4">
+                      <p className="text-xs font-semibold text-red-400 uppercase tracking-wide mb-0.5">
+                        {grupoNome}
+                      </p>
+                      <p className="font-bold text-gray-800 mb-1">{jogo.formato}</p>
+                      <p className="text-sm text-gray-500 mb-1 capitalize">
+                        {formatDate(jogo.data_hora)} · {formatTime(jogo.data_hora)}
+                        {jogo.local ? ` · ${jogo.local}` : ''}
+                      </p>
+                      <p className="text-xs text-red-500 mb-3">O jogo é amanhã! Você ainda não confirmou presença.</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={async () => {
+                            if (notificacaoId) await marcarComoLida(notificacaoId)
+                            await handleConfirmar(jogo.id)
+                            setItens((prev) => prev.filter((i) => !(i.tipo === 'lembrete_confirmacao' && i.jogo.id === jogo.id)))
+                          }}
+                          disabled={respondendo === jogo.id}
+                          className="flex-1 flex items-center justify-center gap-2 bg-verde-campo text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-60"
+                        >
+                          <Check size={15} /> Confirmar
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (notificacaoId) await marcarComoLida(notificacaoId)
+                            await handleRecusar(jogo.id)
+                            setItens((prev) => prev.filter((i) => !(i.tipo === 'lembrete_confirmacao' && i.jogo.id === jogo.id)))
+                          }}
+                          disabled={respondendo === jogo.id}
+                          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-red-500 font-semibold rounded-xl border-2 border-red-200 text-sm disabled:opacity-60"
+                        >
+                          <X size={15} /> Recusar
                         </button>
                       </div>
                     </div>
