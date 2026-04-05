@@ -262,7 +262,7 @@ export default function GrupoDetalhe() {
     setDeleting(true)
     try {
       const { error } = await supabase.from('grupos').delete().eq('id', id)
-      if (error) { setError(error.message); setShowDeleteGrupo(false); return }
+      if (error) { console.error('Erro ao deletar grupo:', error); setError('Não foi possível excluir o grupo. Tente novamente.'); setShowDeleteGrupo(false); return }
       navigate('/grupos')
     } finally {
       setDeleting(false)
@@ -305,7 +305,7 @@ export default function GrupoDetalhe() {
     setDeleting(true)
     try {
       const { error } = await supabase.from('jogos').delete().eq('id', jogoParaDeletar.id)
-      if (error) { setError(error.message); return }
+      if (error) { console.error('Erro ao deletar jogo:', error); setError('Não foi possível excluir o jogo. Tente novamente.'); return }
       setShowDeleteJogo(false)
       setJogoParaDeletar(null)
       fetchAll()

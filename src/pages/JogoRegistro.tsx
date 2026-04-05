@@ -135,15 +135,15 @@ export default function JogoRegistro() {
         )
 
       if (upsertError) {
-        setError(`${upsertError.message} (${upsertError.code})`)
+        console.error('Erro ao salvar estatísticas:', upsertError)
+        setError('Não foi possível salvar. Tente novamente.')
         return
       }
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err: unknown) {
-      console.error('Erro ao salvar:', JSON.stringify(err))
-      const msg = err instanceof Error ? err.message : 'Erro ao salvar estatísticas.'
-      setError(msg)
+      console.error('Erro ao salvar:', err)
+      setError('Não foi possível salvar. Tente novamente.')
     } finally {
       setSaving(false)
     }
