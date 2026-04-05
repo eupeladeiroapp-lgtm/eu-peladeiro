@@ -4,7 +4,11 @@ import { useNavigate, useParams } from 'react-router-dom'
 import AvatarStack from '../components/AvatarStack'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
-import { Confirmacao, Grupo, Jogo, Profile } from '../types'
+import { Confirmacao, Grupo, Jogo, Profile, Time, TimeJogador } from '../types'
+
+interface TimeComJogadores extends Time {
+  jogadores: Profile[]
+}
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('pt-BR', {
@@ -29,6 +33,7 @@ export default function JogoConvite() {
   const [confirmacoes, setConfirmacoes] = useState<Confirmacao[]>([])
   const [confirmacoesProfiles, setConfirmacoesProfiles] = useState<Profile[]>([])
   const [userStatus, setUserStatus] = useState<'confirmado' | 'recusado' | null>(null)
+  const [times, setTimes] = useState<TimeComJogadores[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -82,6 +87,38 @@ export default function JogoConvite() {
           setConfirmacoesProfiles((profilesData as Profile[]) || [])
         } else {
           setConfirmacoesProfiles([])
+        }
+
+        // Busca times sorteados
+        const { data: timesData } = await supabase
+          .from('times')
+          .select('*')
+          .eq('jogo_id', jogoData.id)
+          .order('ordem_fila', { ascending: true })
+
+        if (timesData && timesData.length > 0) {
+          const { data: timeJogadoresData } = await supabase
+            .from('time_jogadores')
+            .select('*')
+            .in('time_id', timesData.map((t: Time) => t.id))
+
+          const profileIds = (timeJogadoresData as TimeJogador[] || []).map((tj) => tj.profile_id)
+          let profilesMap: Record<string, Profile> = {}
+          if (profileIds.length > 0) {
+            const { data: profs } = await supabase.from('profiles').select('*').in('id', profileIds)
+            for (const p of (profs as Profile[]) || []) profilesMap[p.id] = p
+          }
+
+          const timesComJogadores: TimeComJogadores[] = timesData.map((time: Time) => ({
+            ...time,
+            jogadores: (timeJogadoresData as TimeJogador[] || [])
+              .filter((tj) => tj.time_id === time.id)
+              .map((tj) => profilesMap[tj.profile_id])
+              .filter(Boolean),
+          }))
+          setTimes(timesComJogadores)
+        } else {
+          setTimes([])
         }
       }
     } catch (err) {
@@ -299,6 +336,47 @@ export default function JogoConvite() {
           </div>
         </div>
       </div>
+
+      {/* Escalação */}
+      {times.length > 0 && (
+        <div className="px-5 mt-5">
+          <h2 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+            <Shuffle size={16} className="text-verde-campo" />
+            Escalação dos times
+          </h2>
+          <div className="space-y-3">
+            {times.map((time) => (
+              <div key={time.id} className="bg-white rounded-xl border-2 shadow-sm overflow-hidden" style={{ borderColor: time.cor }}>
+                <div className="px-4 py-2.5 flex items-center justify-between" style={{ backgroundColor: time.cor }}>
+                  <p className="font-bold text-white">{time.nome}</p>
+                  <p className="text-white/80 text-xs">{time.jogadores.length} jogadores</p>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {time.jogadores.map((jogador) => (
+                    <div key={jogador.id} className="flex items-center gap-3 px-4 py-2.5">
+                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: `2px solid ${time.cor}` }}>
+                        {jogador.foto_url ? (
+                          <img src={jogador.foto_url} alt={jogador.nome} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: time.cor }}>
+                            {jogador.nome[0].toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-800 text-sm truncate">{jogador.nome}</p>
+                        {jogador.posicao_principal && (
+                          <p className="text-xs text-gray-400">{jogador.posicao_principal}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="px-5 mt-5">
