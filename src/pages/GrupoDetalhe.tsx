@@ -471,7 +471,7 @@ export default function GrupoDetalhe() {
                     <CardJogo
                       jogo={jogo}
                       confirmados={confirmadosPorJogo[jogo.id] || 0}
-                      totalVagas={parseInt(jogo.formato) * 2 || 14}
+                      totalVagas={membros.length}
                       onClick={() => navigate(`/jogo/${jogo.link_token}`)}
                     />
                     <div className="flex gap-2 px-1">
