@@ -161,7 +161,7 @@ export default function JogoRegistro() {
         >
           <ArrowLeft size={18} /> Voltar
         </button>
-        <h1 className="text-white text-2xl font-bold">Minhas realizações</h1>
+        <h1 className="text-white text-2xl font-bold">Minhas Jogadas</h1>
         <p className="text-white/70 text-sm mt-0.5">Registre suas estatísticas da partida</p>
       </div>
 
