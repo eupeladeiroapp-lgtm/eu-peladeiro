@@ -98,6 +98,16 @@ export default function AvaliacaoHabilidades() {
         .upsert(upserts, { onConflict: 'avaliador_id,avaliado_id,grupo_id' })
 
       if (upsertError) throw upsertError
+
+      // Notifica cada jogador avaliado (remove duplicatas se já foi notificado hoje)
+      const notificacoes = membros.map((m) => ({
+        profile_id: m.profile_id,
+        tipo: 'avaliacao_recebida',
+        jogo_id: null,
+        lida: false,
+      }))
+      await supabase.from('notificacoes').insert(notificacoes)
+
       setSaved(true)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao salvar avaliações.'

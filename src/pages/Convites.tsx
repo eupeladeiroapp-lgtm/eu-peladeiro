@@ -1,4 +1,4 @@
-import { Bell, Calendar, Check, ClipboardList, Clock, Shield, Star, Trophy, X } from 'lucide-react'
+import { Bell, Calendar, Check, ClipboardList, Clock, Shield, Sparkles, Star, Trophy, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase'
 import { Jogo, Notificacao } from '../types'
 
 interface ItemNotificacao {
-  tipo: 'confirmacao' | 'estatistica' | 'avaliacao' | 'times_sorteados' | 'partida_encerrada' | 'lembrete_estatistica'
+  tipo: 'confirmacao' | 'estatistica' | 'avaliacao' | 'times_sorteados' | 'partida_encerrada' | 'lembrete_estatistica' | 'avaliacao_recebida'
   jogo: Jogo
   grupoNome: string
   grupoId?: string
@@ -277,6 +277,7 @@ export default function Convites() {
   const timesSorteados = itens.filter((i) => i.tipo === 'times_sorteados')
   const partidasEncerradas = itens.filter((i) => i.tipo === 'partida_encerrada')
   const lembretes = itens.filter((i) => i.tipo === 'lembrete_estatistica')
+  const avaliacoesRecebidas = itens.filter((i) => i.tipo === 'avaliacao_recebida')
   const total = itens.length
 
   return (
@@ -487,6 +488,35 @@ export default function Convites() {
                 </div>
               </div>
             )}
+            {/* Avaliações recebidas */}
+            {avaliacoesRecebidas.length > 0 && (
+              <div>
+                <h2 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <Sparkles size={16} className="text-yellow-500" />
+                  Você foi avaliado!
+                </h2>
+                <div className="space-y-3">
+                  {avaliacoesRecebidas.map(({ notificacaoId }, idx) => (
+                    <div key={`aval-rec-${idx}`} className="bg-yellow-50 rounded-xl border border-yellow-200 shadow-sm p-4">
+                      <p className="font-bold text-gray-800 mb-1">Sua avaliação foi atualizada</p>
+                      <p className="text-sm text-yellow-700 mb-3">
+                        Um colega avaliou suas habilidades anonimamente. Confira sua média atualizada!
+                      </p>
+                      <button
+                        onClick={async () => {
+                          if (notificacaoId) await marcarComoLida(notificacaoId)
+                          navigate('/perfil')
+                        }}
+                        className="w-full bg-yellow-500 text-white font-semibold py-2.5 rounded-xl text-sm"
+                      >
+                        Ver meu perfil
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Lembretes de estatísticas pendentes */}
             {lembretes.length > 0 && (
               <div>
