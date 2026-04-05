@@ -563,7 +563,7 @@ export default function GrupoDetalhe() {
       {/* Modal editar grupo */}
       {showEditGrupo && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-          <div className="w-full max-w-lg bg-white rounded-t-2xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-lg bg-white rounded-t-2xl p-6 pb-10 animate-slide-up max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-xl font-bold text-gray-800">Editar grupo</h2>
               <button onClick={() => setShowEditGrupo(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
@@ -638,7 +638,7 @@ export default function GrupoDetalhe() {
       {/* Modal editar jogo */}
       {showEditJogo && editJogo && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-          <div className="w-full max-w-lg bg-white rounded-t-2xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-lg bg-white rounded-t-2xl p-6 pb-10 animate-slide-up max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-xl font-bold text-gray-800">Editar jogo</h2>
               <button onClick={() => setShowEditJogo(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
@@ -721,7 +721,7 @@ export default function GrupoDetalhe() {
       {/* Modal criar jogo */}
       {showCreateJogo && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-          <div className="w-full max-w-lg bg-white rounded-t-2xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-lg bg-white rounded-t-2xl p-6 pb-10 animate-slide-up max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-xl font-bold text-gray-800">Criar jogo</h2>
               <button
