@@ -1,5 +1,5 @@
-import { ChevronRight, Edit3, Info, LogOut } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Camera, ChevronRight, Edit3, Info, LogOut } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CampoFutebol from '../components/CampoFutebol'
 import Layout from '../components/Layout'
@@ -28,6 +28,9 @@ export default function Perfil() {
   const [posicoesEdit, setPosicoesEdit] = useState<Record<string, 'principal' | 'secundaria'>>({})
   const [savingHabilidades, setSavingHabilidades] = useState(false)
   const [habilidadesMedia, setHabilidadesMedia] = useState<Record<string, number>>({})
+  const [uploadingFoto, setUploadingFoto] = useState(false)
+  const [erroFoto, setErroFoto] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchStats()
@@ -153,6 +156,37 @@ export default function Perfil() {
     }
   }
 
+  async function handleFotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+    setUploadingFoto(true)
+    setErroFoto(null)
+    try {
+      const ext = file.name.split('.').pop() || 'jpg'
+      const path = `${user.id}/avatar.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { upsert: true, contentType: file.type })
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+      const urlComCache = `${publicUrl}?t=${Date.now()}`
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ foto_url: urlComCache })
+        .eq('id', user.id)
+      if (updateError) throw updateError
+      await refetchProfile()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao fazer upload da foto.'
+      setErroFoto(msg)
+      console.error(err)
+    } finally {
+      setUploadingFoto(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   async function handleSignOut() {
     await signOut()
     navigate('/login', { replace: true })
@@ -172,19 +206,39 @@ export default function Perfil() {
         className="px-5 pt-12 pb-8 text-center"
         style={{ background: 'linear-gradient(160deg, #1D9E75, #085041)' }}
       >
-        <div className="relative inline-block mb-3">
-          <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white/30 mx-auto">
-            {profile?.foto_url ? (
-              <img src={profile.foto_url} alt={profile.nome} className="w-full h-full object-cover" />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploadingFoto}
+          className="relative w-24 h-24 rounded-full mx-auto mb-3 block overflow-hidden border-4 border-white/30 group"
+        >
+          {profile?.foto_url ? (
+            <img src={profile.foto_url} alt={profile.nome} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-white/20 flex items-center justify-center">
+              <span className="text-white font-bold text-3xl">
+                {profile?.nome?.[0]?.toUpperCase() || '?'}
+              </span>
+            </div>
+          )}
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            {uploadingFoto ? (
+              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
-              <div className="w-full h-full bg-white/20 flex items-center justify-center">
-                <span className="text-white font-bold text-3xl">
-                  {profile?.nome?.[0]?.toUpperCase() || '?'}
-                </span>
-              </div>
+              <Camera size={22} className="text-white" />
             )}
           </div>
-        </div>
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFotoUpload}
+        />
+
+        {erroFoto && (
+          <p className="text-red-300 text-xs mt-2">{erroFoto}</p>
+        )}
 
         {editing ? (
           <div className="flex items-center gap-2 max-w-xs mx-auto">
