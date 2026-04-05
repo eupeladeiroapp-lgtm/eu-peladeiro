@@ -450,14 +450,12 @@ export default function GrupoDetalhe() {
         {/* Jogos tab */}
         {tab === 'jogos' && (
           <div>
-            {isAdmin && (
-              <button
-                onClick={() => setShowCreateJogo(true)}
-                className="w-full flex items-center justify-center gap-2 bg-verde-campo text-white font-semibold py-3 rounded-xl mb-4 hover:bg-verde-escuro transition-colors"
-              >
-                <Plus size={18} /> Criar novo jogo
-              </button>
-            )}
+            <button
+              onClick={() => setShowCreateJogo(true)}
+              className="w-full flex items-center justify-center gap-2 bg-verde-campo text-white font-semibold py-3 rounded-xl mb-4 hover:bg-verde-escuro transition-colors"
+            >
+              <Plus size={18} /> Criar novo jogo
+            </button>
             {loading ? (
               <div className="space-y-3">
                 {[1, 2].map((i) => (
@@ -511,7 +509,7 @@ export default function GrupoDetalhe() {
               <div className="text-center py-10 text-gray-400">
                 <Calendar size={32} className="mx-auto mb-2 opacity-30" />
                 <p className="font-medium">Nenhum jogo ainda</p>
-                {isAdmin && <p className="text-sm mt-1">Clique em "Criar novo jogo" para começar</p>}
+                <p className="text-sm mt-1">Clique em "Criar novo jogo" para começar</p>
               </div>
             )}
           </div>
