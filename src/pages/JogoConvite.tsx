@@ -486,16 +486,6 @@ export default function JogoConvite() {
               </div>
             )}
 
-            {times.length > 0 && (
-              <button
-                onClick={() => {
-                  document.getElementById('escalacao')?.scrollIntoView({ behavior: 'smooth' })
-                }}
-                className="w-full flex items-center justify-center gap-2 bg-white border-2 border-verde-campo text-verde-campo font-bold py-3.5 rounded-xl hover:bg-verde-claro transition-colors"
-              >
-                <Shuffle size={18} /> Ver escalação dos times
-              </button>
-            )}
           </div>
         )}
 
