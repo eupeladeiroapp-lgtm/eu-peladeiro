@@ -339,7 +339,7 @@ export default function JogoConvite() {
 
       {/* Escalação */}
       {times.length > 0 && (
-        <div className="px-5 mt-5">
+        <div id="escalacao" className="px-5 mt-5">
           <h2 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
             <Shuffle size={16} className="text-verde-campo" />
             Escalação dos times
@@ -481,6 +481,17 @@ export default function JogoConvite() {
                   {jogo.status === 'em_andamento' ? 'Jogo em andamento!' : 'Jogo encerrado'}
                 </p>
               </div>
+            )}
+
+            {times.length > 0 && (
+              <button
+                onClick={() => {
+                  document.getElementById('escalacao')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="w-full flex items-center justify-center gap-2 bg-white border-2 border-verde-campo text-verde-campo font-bold py-3.5 rounded-xl hover:bg-verde-claro transition-colors"
+              >
+                <Shuffle size={18} /> Ver escalação dos times
+              </button>
             )}
           </div>
         )}
