@@ -2,6 +2,7 @@ import { ArrowLeft, CheckCircle, RefreshCw, Shuffle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Layout from '../components/Layout'
+import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { Confirmacao, Jogo, Profile } from '../types'
 import { CORES_TIMES, Jogador, ResultadoSorteio, calcularMediaTime, sortearTimes } from '../utils/sorteio'
@@ -9,6 +10,7 @@ import { CORES_TIMES, Jogador, ResultadoSorteio, calcularMediaTime, sortearTimes
 export default function JogoTimes() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [jogo, setJogo] = useState<Jogo | null>(null)
   const [jogadores, setJogadores] = useState<Jogador[]>([])
   const [resultado, setResultado] = useState<ResultadoSorteio>({ times: [], goleiroFixo: false })
@@ -255,24 +257,26 @@ export default function JogoTimes() {
               )
             })}
 
-            <button
-              onClick={handleSortearNovamente}
-              disabled={confirmando}
-              className="w-full flex items-center justify-center gap-2 border-2 border-verde-campo text-verde-campo font-semibold py-4 rounded-xl hover:bg-verde-claro transition-colors disabled:opacity-50"
-            >
-              <RefreshCw size={18} />
-              Sortear novamente
-            </button>
+            {user?.id === jogo?.criado_por && (
+              <>
+                <button
+                  onClick={handleSortearNovamente}
+                  disabled={confirmando}
+                  className="w-full flex items-center justify-center gap-2 border-2 border-verde-campo text-verde-campo font-semibold py-4 rounded-xl hover:bg-verde-claro transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw size={18} />
+                  Sortear novamente
+                </button>
 
-            {jogo && (
-              <button
-                onClick={handleConfirmarSorteio}
-                disabled={confirmando}
-                className="w-full flex items-center justify-center gap-2 bg-verde-campo text-white font-bold py-4 rounded-xl hover:bg-verde-escuro transition-colors disabled:opacity-60"
-              >
-                <CheckCircle size={18} />
-                {confirmando ? 'Confirmando...' : 'Confirmar sorteio e registrar realizações'}
-              </button>
+                <button
+                  onClick={handleConfirmarSorteio}
+                  disabled={confirmando}
+                  className="w-full flex items-center justify-center gap-2 bg-verde-campo text-white font-bold py-4 rounded-xl hover:bg-verde-escuro transition-colors disabled:opacity-60"
+                >
+                  <CheckCircle size={18} />
+                  {confirmando ? 'Confirmando...' : 'Confirmar sorteio'}
+                </button>
+              </>
             )}
           </>
         )}
