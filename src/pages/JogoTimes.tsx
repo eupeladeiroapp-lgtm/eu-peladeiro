@@ -109,7 +109,8 @@ export default function JogoTimes() {
       // Atualiza status do jogo
       await supabase.from('jogos').update({ status: 'em_andamento' }).eq('id', id)
 
-      // Cria notificações para todos os jogadores confirmados
+      // Remove notificações antigas de times_sorteados para este jogo e recria
+      await supabase.from('notificacoes').delete().eq('jogo_id', id).eq('tipo', 'times_sorteados')
       const notificacoes = jogadores.map((j) => ({
         profile_id: j.id,
         tipo: 'times_sorteados',
