@@ -5,6 +5,7 @@ import Layout from '../components/Layout'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { GrupoMembro, Profile } from '../types'
+import { getPosicaoCor, getPosicaoLabel } from '../utils/posicoes'
 
 const SKILLS = [
   { key: 'chute', label: 'Chute', emoji: '🦵' },
@@ -186,7 +187,9 @@ export default function AvaliacaoHabilidades() {
                     <div className="flex-1 text-left">
                       <p className="font-semibold text-gray-800">{membro.profile?.nome || 'Jogador'}</p>
                       {membro.profile?.posicao_principal && (
-                        <p className="text-xs text-gray-500">{membro.profile.posicao_principal}</p>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getPosicaoCor(membro.profile.posicao_principal)}`}>
+                          {getPosicaoLabel(membro.profile.posicao_principal)}
+                        </span>
                       )}
                     </div>
                     <div className="flex items-center gap-2">

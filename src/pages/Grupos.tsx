@@ -1,4 +1,4 @@
-import { ChevronRight, Plus, Users, X } from 'lucide-react'
+import { ChevronRight, Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
@@ -7,6 +7,17 @@ import { supabase } from '../lib/supabase'
 import { Grupo } from '../types'
 
 const FORMATOS = ['5x5', '7x7', '8x8', '11x11', 'Futsal', 'Society']
+
+const GRUPO_CORES = [
+  '#1D9E75', '#3B82F6', '#8B5CF6', '#F97316',
+  '#EF4444', '#F59E0B', '#EC4899', '#1F2937',
+]
+
+function getGrupoCor(id: string) {
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash)
+  return GRUPO_CORES[Math.abs(hash) % GRUPO_CORES.length]
+}
 
 export default function Grupos() {
   const { user } = useAuth()
@@ -132,8 +143,11 @@ export default function Grupos() {
                 onClick={() => navigate(`/grupos/${grupo.id}`)}
                 className="w-full bg-white rounded-lg border border-gray-100 shadow-sm p-4 flex items-center gap-3 hover:shadow-md transition-shadow text-left"
               >
-                <div className="w-12 h-12 rounded-xl bg-verde-claro flex items-center justify-center flex-shrink-0">
-                  <Users size={22} className="text-verde-campo" />
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-bold text-xl"
+                  style={{ backgroundColor: getGrupoCor(grupo.id) }}
+                >
+                  {grupo.nome[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-gray-800 truncate">{grupo.nome}</p>

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Layout from '../components/Layout'
 import { useAuth } from '../hooks/useAuth'
+import { getPosicaoCor, getPosicaoLabel } from '../utils/posicoes'
 import { supabase } from '../lib/supabase'
 import { Confirmacao, Estatistica, Profile } from '../types'
 
@@ -193,7 +194,9 @@ export default function JogoRegistro() {
                   <div>
                     <p className="font-bold text-gray-800">{j.profile.nome}</p>
                     {j.profile.posicao_principal && (
-                      <p className="text-xs text-gray-500">{j.profile.posicao_principal}</p>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getPosicaoCor(j.profile.posicao_principal)}`}>
+                        {getPosicaoLabel(j.profile.posicao_principal)}
+                      </span>
                     )}
                   </div>
                 </div>

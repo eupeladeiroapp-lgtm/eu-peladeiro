@@ -5,6 +5,7 @@ import AvatarStack from '../components/AvatarStack'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { Confirmacao, Grupo, Jogo, Profile, Time, TimeJogador } from '../types'
+import { getPosicaoCor, getPosicaoLabel } from '../utils/posicoes'
 
 interface TimeComJogadores extends Time {
   jogadores: Profile[]
@@ -319,7 +320,9 @@ export default function JogoConvite() {
                       <div>
                         <p className="text-sm font-semibold text-gray-800">{p.nome}</p>
                         {p.posicao_principal && (
-                          <p className="text-xs text-gray-400">{p.posicao_principal}</p>
+                          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${getPosicaoCor(p.posicao_principal)}`}>
+                            {getPosicaoLabel(p.posicao_principal)}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -460,7 +463,7 @@ export default function JogoConvite() {
             {jogoEncerrado && (
               <button
                 onClick={() => navigate(`/jogo/${jogo.id}/registro`)}
-                className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition-colors"
+                className="w-full flex items-center justify-center gap-2 bg-verde-campo text-white font-bold py-4 rounded-xl hover:bg-verde-escuro transition-colors"
               >
                 📊 Registrar estatísticas
               </button>

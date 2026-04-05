@@ -1,4 +1,5 @@
 import { ArrowLeft, Calendar, Crown, Pencil, Plus, Share2, Shuffle, Trash2, Trophy, User, Users, X } from 'lucide-react'
+import { getPosicaoCor, getPosicaoLabel } from '../utils/posicoes'
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import CardJogo from '../components/CardJogo'
@@ -424,7 +425,9 @@ export default function GrupoDetalhe() {
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-800 truncate">{membro.profile?.nome || 'Jogador'}</p>
                     {membro.profile?.posicao_principal && (
-                      <p className="text-xs text-gray-500">{membro.profile.posicao_principal}</p>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getPosicaoCor(membro.profile.posicao_principal)}`}>
+                        {getPosicaoLabel(membro.profile.posicao_principal)}
+                      </span>
                     )}
                   </div>
                   {membro.role === 'admin' && (

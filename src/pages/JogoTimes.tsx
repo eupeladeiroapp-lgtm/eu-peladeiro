@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { Confirmacao, Jogo, Profile } from '../types'
 import { CORES_TIMES, Jogador, ResultadoSorteio, calcularMediaTime, sortearTimes } from '../utils/sorteio'
+import { getPosicaoCor, getPosicaoLabel } from '../utils/posicoes'
 
 export default function JogoTimes() {
   const { id } = useParams<{ id: string }>()
@@ -239,7 +240,9 @@ export default function JogoTimes() {
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-gray-800 text-sm truncate">{jogador.nome}</p>
                           {jogador.posicao_principal && (
-                            <p className="text-xs text-gray-400">{jogador.posicao_principal}</p>
+                            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${getPosicaoCor(jogador.posicao_principal)}`}>
+                              {getPosicaoLabel(jogador.posicao_principal)}
+                            </span>
                           )}
                         </div>
                         <div className="flex-shrink-0">
