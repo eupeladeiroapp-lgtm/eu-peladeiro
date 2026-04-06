@@ -8,8 +8,8 @@ import { supabase } from '../lib/supabase'
 import { Jogo, Notificacao } from '../types'
 
 interface ItemNotificacao {
-  tipo: 'confirmacao' | 'estatistica' | 'avaliacao' | 'times_sorteados' | 'partida_encerrada' | 'lembrete_estatistica' | 'avaliacao_recebida' | 'lembrete_confirmacao'
-  jogo: Jogo
+  tipo: 'confirmacao' | 'estatistica' | 'avaliacao' | 'times_sorteados' | 'partida_encerrada' | 'lembrete_estatistica' | 'avaliacao_recebida' | 'lembrete_confirmacao' | 'lembrete_criar_jogo'
+  jogo: Jogo | null
   grupoNome: string
   grupoId?: string
   notificacaoId?: string
@@ -148,7 +148,7 @@ export default function Convites() {
             if (!jogo.grupo_id) continue // avulsos sem grupo não têm avaliação de grupo
             if (!gruposAvaliados.has(jogo.grupo_id)) {
               const jaListado = resultado.some(
-                (r) => r.tipo === 'avaliacao' && r.jogo.grupo_id === jogo.grupo_id
+                (r) => r.tipo === 'avaliacao' && r.jogo?.grupo_id === jogo.grupo_id
               )
               if (!jaListado) {
                 resultado.push({
@@ -220,6 +220,15 @@ export default function Convites() {
 
       if (notifs && notifs.length > 0) {
         for (const notif of notifs as (Notificacao & { jogo: Jogo & { grupo: { nome: string } | null } | null })[]) {
+          if (notif.tipo === 'lembrete_criar_jogo') {
+            resultado.push({
+              tipo: 'lembrete_criar_jogo',
+              jogo: null,
+              grupoNome: '',
+              notificacaoId: notif.id,
+            })
+            continue
+          }
           if (!notif.jogo) continue
           resultado.push({
             tipo: notif.tipo,
@@ -252,7 +261,7 @@ export default function Convites() {
         { jogo_id: jogoId, profile_id: user.id, status: 'confirmado', tipo_convite: 'fixo' },
         { onConflict: 'jogo_id,profile_id' }
       )
-      setItens((prev) => prev.filter((i) => !(i.tipo === 'confirmacao' && i.jogo.id === jogoId)))
+      setItens((prev) => prev.filter((i) => !(i.tipo === 'confirmacao' && i.jogo?.id === jogoId)))
       toast.success('Presença confirmada!')
     } finally {
       setRespondendo(null)
@@ -267,20 +276,22 @@ export default function Convites() {
         { jogo_id: jogoId, profile_id: user.id, status: 'recusado', tipo_convite: 'fixo' },
         { onConflict: 'jogo_id,profile_id' }
       )
-      setItens((prev) => prev.filter((i) => !(i.tipo === 'confirmacao' && i.jogo.id === jogoId)))
+      setItens((prev) => prev.filter((i) => !(i.tipo === 'confirmacao' && i.jogo?.id === jogoId)))
       toast('Presença recusada', { icon: '👋' })
     } finally {
       setRespondendo(null)
     }
   }
 
-  const confirmacoes = itens.filter((i) => i.tipo === 'confirmacao')
-  const lembretesConfirmacao = itens.filter((i) => i.tipo === 'lembrete_confirmacao')
-  const estatisticas = itens.filter((i) => i.tipo === 'estatistica')
-  const avaliacoes = itens.filter((i) => i.tipo === 'avaliacao')
-  const timesSorteados = itens.filter((i) => i.tipo === 'times_sorteados')
-  const partidasEncerradas = itens.filter((i) => i.tipo === 'partida_encerrada')
-  const lembretes = itens.filter((i) => i.tipo === 'lembrete_estatistica')
+  type ItemComJogo = ItemNotificacao & { jogo: Jogo }
+  const lembretesCriarJogo = itens.filter((i) => i.tipo === 'lembrete_criar_jogo')
+  const confirmacoes = itens.filter((i) => i.tipo === 'confirmacao' && i.jogo) as ItemComJogo[]
+  const lembretesConfirmacao = itens.filter((i) => i.tipo === 'lembrete_confirmacao' && i.jogo) as ItemComJogo[]
+  const estatisticas = itens.filter((i) => i.tipo === 'estatistica' && i.jogo) as ItemComJogo[]
+  const avaliacoes = itens.filter((i) => i.tipo === 'avaliacao' && i.jogo) as ItemComJogo[]
+  const timesSorteados = itens.filter((i) => i.tipo === 'times_sorteados' && i.jogo) as ItemComJogo[]
+  const partidasEncerradas = itens.filter((i) => i.tipo === 'partida_encerrada' && i.jogo) as ItemComJogo[]
+  const lembretes = itens.filter((i) => i.tipo === 'lembrete_estatistica' && i.jogo) as ItemComJogo[]
   const avaliacoesRecebidas = itens.filter((i) => i.tipo === 'avaliacao_recebida')
   const total = itens.length
 
@@ -359,6 +370,47 @@ export default function Convites() {
               </div>
             )}
 
+            {/* Lembrete semanal — criar jogo */}
+            {lembretesCriarJogo.length > 0 && (
+              <div>
+                <h2 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <span className="text-base">⚽</span>
+                  É hora da pelada!
+                </h2>
+                <div className="space-y-3">
+                  {lembretesCriarJogo.map(({ notificacaoId }, idx) => (
+                    <div key={`lcj-${idx}`} className="bg-gradient-to-r from-verde-campo to-verde-escuro rounded-xl shadow-sm p-5 text-white">
+                      <p className="font-bold text-lg mb-1">Bora jogar essa semana? 🏃</p>
+                      <p className="text-white/80 text-sm mb-4">
+                        Crie um jogo, compartilhe o link e convide seus amigos para confirmar presença!
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={async () => {
+                            if (notificacaoId) await marcarComoLida(notificacaoId)
+                            navigate('/grupos')
+                            setItens((prev) => prev.filter((_, i) => i !== idx || prev[i].tipo !== 'lembrete_criar_jogo'))
+                          }}
+                          className="flex-1 bg-white text-verde-campo font-bold py-2.5 rounded-xl text-sm hover:bg-gray-100 transition-colors"
+                        >
+                          Criar jogo agora
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (notificacaoId) await marcarComoLida(notificacaoId)
+                            setItens((prev) => prev.filter((i) => i.notificacaoId !== notificacaoId))
+                          }}
+                          className="px-4 bg-white/20 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-white/30 transition-colors"
+                        >
+                          Dispensar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Lembretes de confirmação (24h antes) */}
             {lembretesConfirmacao.length > 0 && (
               <div>
@@ -383,7 +435,7 @@ export default function Convites() {
                           onClick={async () => {
                             if (notificacaoId) await marcarComoLida(notificacaoId)
                             await handleConfirmar(jogo.id)
-                            setItens((prev) => prev.filter((i) => !(i.tipo === 'lembrete_confirmacao' && i.jogo.id === jogo.id)))
+                            setItens((prev) => prev.filter((i) => !(i.tipo === 'lembrete_confirmacao' && i.jogo?.id === jogo.id)))
                           }}
                           disabled={respondendo === jogo.id}
                           className="flex-1 flex items-center justify-center gap-2 bg-verde-campo text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-60"
@@ -394,7 +446,7 @@ export default function Convites() {
                           onClick={async () => {
                             if (notificacaoId) await marcarComoLida(notificacaoId)
                             await handleRecusar(jogo.id)
-                            setItens((prev) => prev.filter((i) => !(i.tipo === 'lembrete_confirmacao' && i.jogo.id === jogo.id)))
+                            setItens((prev) => prev.filter((i) => !(i.tipo === 'lembrete_confirmacao' && i.jogo?.id === jogo.id)))
                           }}
                           disabled={respondendo === jogo.id}
                           className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-red-500 font-semibold rounded-xl border-2 border-red-200 text-sm disabled:opacity-60"
