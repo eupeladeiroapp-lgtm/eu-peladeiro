@@ -143,12 +143,20 @@ export default function GrupoDetalhe() {
 
       setMembros((membrosData as (GrupoMembro & { profile: Profile })[]) || [])
 
-      const { data: jogosData } = await supabase
+      const jogosQuery = supabase
         .from('jogos')
         .select('*')
         .eq('grupo_id', id)
         .order('data_hora', { ascending: false })
 
+      // Free: histórico limitado aos últimos 30 dias
+      if (!profile?.is_pro) {
+        const limite = new Date()
+        limite.setDate(limite.getDate() - 30)
+        jogosQuery.gte('data_hora', limite.toISOString())
+      }
+
+      const { data: jogosData } = await jogosQuery
       const jogosList = (jogosData as Jogo[]) || []
       setJogos(jogosList)
 
@@ -458,6 +466,14 @@ export default function GrupoDetalhe() {
         {/* Jogos tab */}
         {tab === 'jogos' && (
           <div>
+            {!profile?.is_pro && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex items-center gap-2">
+                <span className="text-base">⭐</span>
+                <p className="text-amber-700 text-xs flex-1">
+                  Plano Free exibe apenas os últimos 30 dias. <button onClick={() => setShowUpgradeMembros(true)} className="font-bold underline">Ver Pro</button>
+                </p>
+              </div>
+            )}
             <button
               onClick={() => setShowCreateJogo(true)}
               className="w-full flex items-center justify-center gap-2 bg-verde-campo text-white font-semibold py-3 rounded-xl mb-4 hover:bg-verde-escuro transition-colors"
