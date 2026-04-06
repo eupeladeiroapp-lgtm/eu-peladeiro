@@ -12,6 +12,7 @@ export interface Profile {
     forca: number
     velocidade: number
   }
+  is_pro: boolean
   created_at: string
 }
 
