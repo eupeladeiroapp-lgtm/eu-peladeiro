@@ -1,5 +1,6 @@
 import { Bell, Plus, Shield, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import CardJogo from '../components/CardJogo'
 import Layout from '../components/Layout'
@@ -129,6 +130,7 @@ export default function Home() {
       { onConflict: 'jogo_id,profile_id' }
     )
     setJogos((prev) => prev.map((j) => j.id === jogoId ? { ...j, userStatus: 'confirmado', confirmados: j.confirmados + (j.userStatus === 'confirmado' ? 0 : 1) } : j))
+    toast.success('Presença confirmada!')
   }
 
   async function handleRecusar(jogoId: string) {
@@ -138,6 +140,7 @@ export default function Home() {
       { onConflict: 'jogo_id,profile_id' }
     )
     setJogos((prev) => prev.map((j) => j.id === jogoId ? { ...j, userStatus: 'recusado', confirmados: j.confirmados - (j.userStatus === 'confirmado' ? 1 : 0) } : j))
+    toast('Presença recusada', { icon: '👋' })
   }
 
   async function fetchStats() {

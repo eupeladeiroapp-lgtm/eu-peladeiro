@@ -1,5 +1,6 @@
 import { Bell, Calendar, Check, ClipboardList, Clock, Shield, Sparkles, Star, Trophy, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 import { useAuth } from '../hooks/useAuth'
@@ -252,6 +253,7 @@ export default function Convites() {
         { onConflict: 'jogo_id,profile_id' }
       )
       setItens((prev) => prev.filter((i) => !(i.tipo === 'confirmacao' && i.jogo.id === jogoId)))
+      toast.success('Presença confirmada!')
     } finally {
       setRespondendo(null)
     }
@@ -266,6 +268,7 @@ export default function Convites() {
         { onConflict: 'jogo_id,profile_id' }
       )
       setItens((prev) => prev.filter((i) => !(i.tipo === 'confirmacao' && i.jogo.id === jogoId)))
+      toast('Presença recusada', { icon: '👋' })
     } finally {
       setRespondendo(null)
     }

@@ -87,18 +87,29 @@ export default function CardJogo({
         </div>
       </div>
 
+      {totalVagas > 0 && (
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-1 text-xs text-gray-500">
+              <Users size={11} className="text-verde-campo" />
+              <span><span className="font-bold text-verde-campo">{confirmados}</span>/{totalVagas} confirmados</span>
+            </div>
+            <span className="text-xs text-gray-400">{Math.round((confirmados / totalVagas) * 100)}%</span>
+          </div>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-verde-campo rounded-full transition-all duration-500"
+              style={{ width: `${Math.min((confirmados / totalVagas) * 100, 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {avatars.length > 0 && (
             <AvatarStack avatars={avatars} names={nomes} max={5} size="sm" />
           )}
-          <div className="flex items-center gap-1 text-xs text-gray-600">
-            <Users size={12} className="text-verde-campo" />
-            <span>
-              <span className="font-semibold text-verde-campo">{confirmados}</span>
-              <span>/{totalVagas} confirmados</span>
-            </span>
-          </div>
         </div>
 
         {jogo.status === 'aberto' && (onConfirmar || onRecusar) && (

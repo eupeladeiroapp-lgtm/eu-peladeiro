@@ -1,5 +1,6 @@
 import { ChevronRight, Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 import { useAuth } from '../hooks/useAuth'
@@ -100,10 +101,12 @@ export default function Grupos() {
       setNovoNome('')
       setNovaDesc('')
       setNovoFormato('7x7')
+      toast.success('Grupo criado!')
       navigate(`/grupos/${grupoId}`)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao criar grupo.'
       setError(msg)
+      toast.error('Erro ao criar grupo.')
     } finally {
       setCreating(false)
     }

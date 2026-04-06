@@ -1,5 +1,6 @@
 import { Camera, ChevronRight, Edit3, Info, LogOut } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import CampoFutebol from '../components/CampoFutebol'
 import Layout from '../components/Layout'
@@ -110,8 +111,10 @@ export default function Perfil() {
       await supabase.from('profiles').update({ nome: editNome.trim() }).eq('id', user.id)
       await refetchProfile()
       setEditing(false)
+      toast.success('Nome atualizado!')
     } catch (err) {
       console.error(err)
+      toast.error('Erro ao salvar nome.')
     } finally {
       setSaving(false)
     }
@@ -149,8 +152,10 @@ export default function Perfil() {
         .eq('id', user.id)
       await refetchProfile()
       setEditandoHabilidades(false)
+      toast.success('Habilidades salvas!')
     } catch (err) {
       console.error(err)
+      toast.error('Erro ao salvar habilidades.')
     } finally {
       setSavingHabilidades(false)
     }
@@ -177,9 +182,11 @@ export default function Perfil() {
         .eq('id', user.id)
       if (updateError) throw updateError
       await refetchProfile()
+      toast.success('Foto atualizada!')
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao fazer upload da foto.'
       setErroFoto(msg)
+      toast.error(msg)
       console.error(err)
     } finally {
       setUploadingFoto(false)

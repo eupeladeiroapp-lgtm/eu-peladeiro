@@ -1,4 +1,5 @@
 import React from 'react'
+import { Toaster } from 'react-hot-toast'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 
@@ -160,6 +161,15 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppRoutes />
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 3000,
+            style: { borderRadius: '12px', fontWeight: 600, fontSize: '14px' },
+            success: { style: { background: '#1D9E75', color: '#fff' } },
+            error: { style: { background: '#EF4444', color: '#fff' } },
+          }}
+        />
       </AuthProvider>
     </BrowserRouter>
   )
