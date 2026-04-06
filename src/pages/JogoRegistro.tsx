@@ -13,6 +13,7 @@ interface JogadorStats {
   assistencias: number
   defesas: number
   vitorias: number
+  empates: number
 }
 
 function CounterInput({
@@ -93,6 +94,7 @@ export default function JogoRegistro() {
         assistencias: stats?.assistencias || 0,
         defesas: stats?.defesas || 0,
         vitorias: (stats as any)?.vitorias || 0,
+        empates: (stats as any)?.empates || 0,
       }])
     } catch (err) {
       console.error(err)
@@ -131,6 +133,7 @@ export default function JogoRegistro() {
             assistencias: minha.assistencias,
             defesas: minha.defesas,
             vitorias: minha.vitorias,
+            empates: minha.empates,
           },
           { onConflict: 'jogo_id,profile_id' }
         )
@@ -226,6 +229,11 @@ export default function JogoRegistro() {
                     value={j.defesas}
                     onChange={(v) => updateJogador(j.profile.id, 'defesas', v)}
                     label="🧤 Defesas"
+                  />
+                  <CounterInput
+                    value={j.empates}
+                    onChange={(v) => updateJogador(j.profile.id, 'empates', v)}
+                    label="🤝 Empates"
                   />
                 </div>
               </div>

@@ -18,7 +18,7 @@ interface RankingEntry {
   valor: number
 }
 
-type TabRanking = 'goleador' | 'garcom' | 'muralha' | 'vitorias'
+type TabRanking = 'goleador' | 'garcom' | 'muralha' | 'vitorias' | 'empates'
 
 type TabType = 'membros' | 'jogos' | 'rankings'
 
@@ -99,18 +99,19 @@ export default function GrupoDetalhe() {
 
       if (!statsData || statsData.length === 0) { setRankings([]); return }
 
-      const agg: Record<string, { profile: Profile; gols: number; assistencias: number; defesas: number; vitorias: number }> = {}
+      const agg: Record<string, { profile: Profile; gols: number; assistencias: number; defesas: number; vitorias: number; empates: number }> = {}
       for (const stat of statsData as (Estatistica & { profile: Profile })[]) {
         if (!agg[stat.profile_id]) {
-          agg[stat.profile_id] = { profile: stat.profile, gols: 0, assistencias: 0, defesas: 0, vitorias: 0 }
+          agg[stat.profile_id] = { profile: stat.profile, gols: 0, assistencias: 0, defesas: 0, vitorias: 0, empates: 0 }
         }
         agg[stat.profile_id].gols += stat.gols
         agg[stat.profile_id].assistencias += stat.assistencias
         agg[stat.profile_id].defesas += stat.defesas
         agg[stat.profile_id].vitorias += (stat as any).vitorias || 0
+        agg[stat.profile_id].empates += (stat as any).empates || 0
       }
 
-      const field = rankingTab === 'goleador' ? 'gols' : rankingTab === 'garcom' ? 'assistencias' : rankingTab === 'muralha' ? 'defesas' : 'vitorias'
+      const field = rankingTab === 'goleador' ? 'gols' : rankingTab === 'garcom' ? 'assistencias' : rankingTab === 'muralha' ? 'defesas' : rankingTab === 'vitorias' ? 'vitorias' : 'empates'
       const sorted = Object.values(agg)
         .map((e) => ({ id: e.profile.id, nome: e.profile.nome, foto_url: e.profile.foto_url, valor: e[field] }))
         .sort((a, b) => b.valor - a.valor)
@@ -556,6 +557,7 @@ export default function GrupoDetalhe() {
                 { key: 'garcom', label: '🎯 Assist.' },
                 { key: 'muralha', label: '🛡️ Defesas' },
                 { key: 'vitorias', label: '🏆 Vitórias' },
+                { key: 'empates', label: '🤝 Empates' },
               ] as { key: TabRanking; label: string }[]).map(({ key, label }) => (
                 <button
                   key={key}

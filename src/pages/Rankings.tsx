@@ -83,16 +83,17 @@ export default function Rankings() {
       }
 
       // Agrega por jogador
-      const aggregated: Record<string, { profile: Profile; gols: number; assistencias: number; defesas: number; vitorias: number }> = {}
+      const aggregated: Record<string, { profile: Profile; gols: number; assistencias: number; defesas: number; vitorias: number; empates: number }> = {}
 
       for (const stat of statsData as (Estatistica & { profile: Profile })[]) {
         if (!aggregated[stat.profile_id]) {
-          aggregated[stat.profile_id] = { profile: stat.profile, gols: 0, assistencias: 0, defesas: 0, vitorias: 0 }
+          aggregated[stat.profile_id] = { profile: stat.profile, gols: 0, assistencias: 0, defesas: 0, vitorias: 0, empates: 0 }
         }
         aggregated[stat.profile_id].gols += stat.gols
         aggregated[stat.profile_id].assistencias += stat.assistencias
         aggregated[stat.profile_id].defesas += stat.defesas
         aggregated[stat.profile_id].vitorias += (stat as any).vitorias || 0
+        aggregated[stat.profile_id].empates += (stat as any).empates || 0
       }
 
       let sorted: RankingEntry[] = []
@@ -115,7 +116,7 @@ export default function Rankings() {
             id: e.profile.id,
             nome: e.profile.nome,
             foto_url: e.profile.foto_url,
-            valor: e.gols * 3 + e.assistencias * 2 + e.vitorias * 2 + Math.floor(e.defesas / 3),
+            valor: e.gols * 3 + e.assistencias * 2 + e.vitorias * 2 + e.empates * 1 + Math.floor(e.defesas / 3),
           }))
           .sort((a, b) => b.valor - a.valor)
       }
