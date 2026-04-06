@@ -439,7 +439,14 @@ export default function GrupoDetalhe() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 truncate">{membro.profile?.nome || 'Jogador'}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-semibold text-gray-800 truncate">{membro.profile?.nome || 'Jogador'}</p>
+                      {membro.profile?.is_pro && (
+                        <span className="inline-flex items-center bg-yellow-400 text-yellow-900 text-xs font-black px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0">
+                          PRO
+                        </span>
+                      )}
+                    </div>
                     {membro.profile?.posicao_principal && (
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getPosicaoCor(membro.profile.posicao_principal)}`}>
                         {getPosicaoLabel(membro.profile.posicao_principal)}

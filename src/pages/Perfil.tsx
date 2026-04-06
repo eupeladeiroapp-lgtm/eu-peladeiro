@@ -276,7 +276,7 @@ export default function Perfil() {
             <h1 className="text-white text-2xl font-bold">{profile?.nome || 'Peladeiro'}</h1>
             {profile?.is_pro && (
               <span className="inline-flex items-center gap-1 bg-yellow-400 text-yellow-900 text-xs font-black px-2 py-0.5 rounded-full uppercase tracking-wide">
-                ⭐ Pro
+                PRO
               </span>
             )}
             <button

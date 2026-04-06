@@ -185,7 +185,14 @@ export default function Home() {
             </div>
             <div>
               <p className="text-white/70 text-xs">Bem-vindo de volta,</p>
-              <p className="text-white font-bold text-lg leading-tight">Olá, {primeiroNome}! 👋</p>
+              <div className="flex items-center gap-2">
+                <p className="text-white font-bold text-lg leading-tight">Olá, {primeiroNome}! 👋</p>
+                {profile?.is_pro && (
+                  <span className="inline-flex items-center gap-1 bg-yellow-400 text-yellow-900 text-xs font-black px-2 py-0.5 rounded-full uppercase tracking-wide">
+                    PRO
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <button
