@@ -136,12 +136,14 @@ export default function JogoConvite() {
     setSaving(true)
     setError(null)
     try {
+      const conf = confirmacoes.find((c) => c.profile_id === user.id)
+      const tipo = conf?.tipo_convite || 'avulso'
       const { error: confError } = await supabase.from('confirmacoes').upsert({
         jogo_id: jogo.id,
         profile_id: user.id,
         status: 'confirmado',
-        tipo_convite: 'avulso',
-      })
+        tipo_convite: tipo,
+      }, { onConflict: 'jogo_id,profile_id' })
       if (confError) throw confError
       setUserStatus('confirmado')
       toast.success('Presença confirmada!')
@@ -159,12 +161,14 @@ export default function JogoConvite() {
     setSaving(true)
     setError(null)
     try {
+      const conf = confirmacoes.find((c) => c.profile_id === user.id)
+      const tipo = conf?.tipo_convite || 'avulso'
       const { error: confError } = await supabase.from('confirmacoes').upsert({
         jogo_id: jogo.id,
         profile_id: user.id,
         status: 'recusado',
-        tipo_convite: 'avulso',
-      })
+        tipo_convite: tipo,
+      }, { onConflict: 'jogo_id,profile_id' })
       if (confError) throw confError
       setUserStatus('recusado')
       toast('Presença recusada', { icon: '👋' })
