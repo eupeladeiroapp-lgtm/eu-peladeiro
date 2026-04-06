@@ -2,6 +2,7 @@ import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Layout from '../components/Layout'
+import ModalUpgradePro from '../components/ModalUpgradePro'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { GrupoMembro, Profile } from '../types'
@@ -21,7 +22,7 @@ type MembroComProfile = GrupoMembro & { profile: Profile }
 export default function AvaliacaoHabilidades() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
 
   const [membros, setMembros] = useState<MembroComProfile[]>([])
   const [loading, setLoading] = useState(true)
@@ -29,6 +30,8 @@ export default function AvaliacaoHabilidades() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [expandido, setExpandido] = useState<Record<string, boolean>>({})
+  const [showUpgrade, setShowUpgrade] = useState(false)
+  const [avaliacoesNoMes, setAvaliacoesNoMes] = useState(0)
 
   // avaliacoes[profileId] = { chute: 5, drible: 5, ... }
   const [avaliacoes, setAvaliacoes] = useState<Record<string, Record<string, number>>>({})
@@ -38,9 +41,21 @@ export default function AvaliacaoHabilidades() {
   }, [id])
 
   async function fetchMembros() {
-    if (!id) return
+    if (!id || !user) return
     try {
       setLoading(true)
+
+      // Conta avaliações feitas no mês corrente
+      const inicioMes = new Date()
+      inicioMes.setDate(1)
+      inicioMes.setHours(0, 0, 0, 0)
+      const { count } = await supabase
+        .from('avaliacoes')
+        .select('*', { count: 'exact', head: true })
+        .eq('avaliador_id', user.id)
+        .gte('created_at', inicioMes.toISOString())
+      setAvaliacoesNoMes(count || 0)
+
       const { data } = await supabase
         .from('grupo_membros')
         .select('*, profile:profiles(*)')
@@ -83,6 +98,13 @@ export default function AvaliacaoHabilidades() {
 
   async function handleSubmit() {
     if (!user || !id) return
+
+    // Gate: free pode avaliar até 3 grupos por mês
+    if (!profile?.is_pro && avaliacoesNoMes >= 3) {
+      setShowUpgrade(true)
+      return
+    }
+
     setSaving(true)
     setError(null)
     try {
@@ -145,6 +167,25 @@ export default function AvaliacaoHabilidades() {
       </div>
 
       <div className="px-5 py-5 pb-32">
+        {/* Aviso limite free */}
+        {!profile?.is_pro && (
+          <div className={`rounded-xl p-4 mb-4 flex items-center gap-3 ${avaliacoesNoMes >= 3 ? 'bg-red-50 border border-red-200' : 'bg-amber-50 border border-amber-200'}`}>
+            <span className="text-xl">{avaliacoesNoMes >= 3 ? '🔒' : '⭐'}</span>
+            <div>
+              <p className={`font-semibold text-sm ${avaliacoesNoMes >= 3 ? 'text-red-700' : 'text-amber-700'}`}>
+                {avaliacoesNoMes >= 3
+                  ? 'Limite atingido — faça upgrade para Pro'
+                  : `Avaliações este mês: ${avaliacoesNoMes}/3 (plano Free)`}
+              </p>
+              <p className={`text-xs mt-0.5 ${avaliacoesNoMes >= 3 ? 'text-red-500' : 'text-amber-600'}`}>
+                {avaliacoesNoMes >= 3
+                  ? 'Usuários Pro têm avaliações ilimitadas.'
+                  : 'Usuários Pro têm avaliações ilimitadas.'}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Aviso anonimato */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 flex items-start gap-3">
           <span className="text-xl">🔒</span>
@@ -252,6 +293,13 @@ export default function AvaliacaoHabilidades() {
           </div>
         )}
       </div>
+      {showUpgrade && (
+        <ModalUpgradePro
+          titulo="Limite de avaliações atingido"
+          descricao="No plano Free você pode avaliar até 3 grupos por mês. Faça upgrade para Pro e avalie sem limites!"
+          onFechar={() => setShowUpgrade(false)}
+        />
+      )}
     </Layout>
   )
 }

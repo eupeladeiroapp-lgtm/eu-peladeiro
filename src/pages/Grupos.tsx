@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
+import ModalUpgradePro from '../components/ModalUpgradePro'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { Grupo } from '../types'
@@ -21,11 +22,12 @@ function getGrupoCor(id: string) {
 }
 
 export default function Grupos() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const [grupos, setGrupos] = useState<Grupo[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [showUpgrade, setShowUpgrade] = useState(false)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -124,7 +126,13 @@ export default function Grupos() {
           <p className="text-white/70 text-sm">{grupos.length} grupo{grupos.length !== 1 ? 's' : ''}</p>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            if (!profile?.is_pro && grupos.length >= 2) {
+              setShowUpgrade(true)
+            } else {
+              setShowModal(true)
+            }
+          }}
           className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
         >
           <Plus size={22} />
@@ -138,7 +146,21 @@ export default function Grupos() {
               <div key={i} className="bg-white rounded-lg p-4 animate-pulse h-20" />
             ))}
           </div>
-        ) : grupos.length > 0 ? (
+        ) : grupos.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4">👥</div>
+            <h3 className="text-gray-700 font-semibold text-lg mb-2">Nenhum grupo ainda</h3>
+            <p className="text-gray-400 text-sm mb-6">
+              Crie um grupo para organizar as peladas com seus amigos!
+            </p>
+            <button
+              onClick={() => setShowModal(true)}
+              className="bg-verde-campo text-white font-semibold px-6 py-3 rounded-xl hover:bg-verde-escuro transition-colors"
+            >
+              Criar meu primeiro grupo
+            </button>
+          </div>
+        ) : (
           <div className="space-y-3">
             {grupos.map((grupo) => (
               <button
@@ -164,23 +186,32 @@ export default function Grupos() {
                 <ChevronRight size={18} className="text-gray-400 flex-shrink-0" />
               </button>
             ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4">👥</div>
-            <h3 className="text-gray-700 font-semibold text-lg mb-2">Nenhum grupo ainda</h3>
-            <p className="text-gray-400 text-sm mb-6">
-              Crie um grupo para organizar as peladas com seus amigos!
-            </p>
-            <button
-              onClick={() => setShowModal(true)}
-              className="bg-verde-campo text-white font-semibold px-6 py-3 rounded-xl hover:bg-verde-escuro transition-colors"
-            >
-              Criar meu primeiro grupo
-            </button>
+            {!profile?.is_pro && grupos.length >= 2 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                <span className="text-xl">⭐</span>
+                <div>
+                  <p className="font-semibold text-amber-800 text-sm">Limite do plano Free atingido</p>
+                  <p className="text-amber-600 text-xs mt-0.5">Você atingiu o limite de 2 grupos. Faça upgrade para Pro e crie grupos ilimitados.</p>
+                  <button
+                    onClick={() => setShowUpgrade(true)}
+                    className="mt-2 bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg"
+                  >
+                    Ver plano Pro
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {showUpgrade && (
+        <ModalUpgradePro
+          titulo="Limite de grupos atingido"
+          descricao="No plano Free você pode criar até 2 grupos. Faça upgrade para Pro e crie grupos ilimitados!"
+          onFechar={() => setShowUpgrade(false)}
+        />
+      )}
 
       {/* Modal criar grupo */}
       {showModal && (

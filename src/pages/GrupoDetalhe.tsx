@@ -1,9 +1,11 @@
 import { ArrowLeft, Calendar, Crown, Pencil, Plus, Share2, Shuffle, Trash2, Trophy, User, Users, X } from 'lucide-react'
 import { getPosicaoCor, getPosicaoLabel } from '../utils/posicoes'
 import React, { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useNavigate, useParams } from 'react-router-dom'
 import CardJogo from '../components/CardJogo'
 import Layout from '../components/Layout'
+import ModalUpgradePro from '../components/ModalUpgradePro'
 import RankingList from '../components/RankingList'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
@@ -25,7 +27,8 @@ const FORMATOS = ['5x5', '7x7', '8x8', '11x11', 'Futsal', 'Society']
 export default function GrupoDetalhe() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const [showUpgradeMembros, setShowUpgradeMembros] = useState(false)
 
   const [grupo, setGrupo] = useState<Grupo | null>(null)
   const [membros, setMembros] = useState<(GrupoMembro & { profile: Profile })[]>([])
@@ -384,6 +387,10 @@ export default function GrupoDetalhe() {
           <div className="space-y-3">
             <button
               onClick={() => {
+                if (!profile?.is_pro && membros.length >= 25) {
+                  setShowUpgradeMembros(true)
+                  return
+                }
                 const link = `${window.location.origin}/grupo/convite/${id}`
                 const texto = `Vem jogar comigo na pelada! Entra no grupo pelo Eu Peladeiro: ${link}`
                 if (navigator.share) {
@@ -396,6 +403,7 @@ export default function GrupoDetalhe() {
               className="w-full flex items-center justify-center gap-2 bg-verde-campo text-white font-semibold py-3 rounded-xl hover:bg-verde-escuro transition-colors"
             >
               <Share2 size={18} /> Convidar jogadores
+              {!profile?.is_pro && membros.length >= 25 && <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded-full">🔒</span>}
             </button>
 
             <button
@@ -827,6 +835,13 @@ export default function GrupoDetalhe() {
             </div>
           </div>
         </div>
+      )}
+      {showUpgradeMembros && (
+        <ModalUpgradePro
+          titulo="Limite de membros atingido"
+          descricao="No plano Free cada grupo pode ter até 25 membros. Faça upgrade para Pro e convide jogadores ilimitados!"
+          onFechar={() => setShowUpgradeMembros(false)}
+        />
       )}
     </Layout>
   )
