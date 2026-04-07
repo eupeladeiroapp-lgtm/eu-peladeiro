@@ -10,11 +10,29 @@ export interface Jogador {
 export interface ResultadoSorteio {
   times: Jogador[][]
   goleiroFixo: boolean // true when goalkeepers don't rotate (fewer goalkeepers than teams)
+  reservas: Jogador[] // players not assigned to any team (incomplete quorum)
 }
 
-export function sortearTimes(jogadores: Jogador[], numTimes: number): ResultadoSorteio {
-  const goleiros = jogadores.filter(j => j.posicao_principal === 'GOL')
-  const outros = jogadores.filter(j => j.posicao_principal !== 'GOL')
+export function sortearTimes(
+  jogadores: Jogador[],
+  numTimes: number,
+  jogadoresPorTime?: number
+): ResultadoSorteio {
+  // Limit to complete teams only if jogadoresPorTime is specified
+  let jogadoresParaSortear = [...jogadores]
+  let reservas: Jogador[] = []
+
+  if (jogadoresPorTime && jogadoresPorTime > 0) {
+    const maxJogadores = numTimes * jogadoresPorTime
+    if (jogadores.length > maxJogadores) {
+      // Input is pre-shuffled, so this is a random selection for bench
+      jogadoresParaSortear = jogadores.slice(0, maxJogadores)
+      reservas = jogadores.slice(maxJogadores)
+    }
+  }
+
+  const goleiros = jogadoresParaSortear.filter(j => j.posicao_principal === 'GOL')
+  const outros = jogadoresParaSortear.filter(j => j.posicao_principal !== 'GOL')
 
   // When fewer goalkeepers than teams, goalkeepers are fixed (no rotation)
   const goleiroFixo = goleiros.length > 0 && goleiros.length < numTimes
@@ -39,7 +57,7 @@ export function sortearTimes(jogadores: Jogador[], numTimes: number): ResultadoS
     if (timeAtual < 0) { direcao = 1; timeAtual = 0 }
   }
 
-  return { times, goleiroFixo }
+  return { times, goleiroFixo, reservas }
 }
 
 export function calcularNivel(

@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle, RefreshCw, Shuffle } from 'lucide-react'
+import { ArrowLeft, CheckCircle, RefreshCw, Shuffle, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Layout from '../components/Layout'
@@ -14,9 +14,12 @@ export default function JogoTimes() {
   const { user } = useAuth()
   const [jogo, setJogo] = useState<Jogo | null>(null)
   const [jogadores, setJogadores] = useState<Jogador[]>([])
-  const [resultado, setResultado] = useState<ResultadoSorteio>({ times: [], goleiroFixo: false })
+  const [resultado, setResultado] = useState<ResultadoSorteio>({ times: [], goleiroFixo: false, reservas: [] })
   const [loading, setLoading] = useState(true)
   const [confirmando, setConfirmando] = useState(false)
+  const [configStep, setConfigStep] = useState(true)
+  const [numTimesConfig, setNumTimesConfig] = useState(2)
+  const [jogadoresPorTime, setJogadoresPorTime] = useState(5)
 
   useEffect(() => {
     fetchData()
@@ -57,7 +60,14 @@ export default function JogoTimes() {
         )
 
         setJogadores(jogadoresData)
-        setResultado(sortearTimes(jogadoresData, jogoData.num_times || 2))
+
+        // Set smart defaults for config
+        const defaultNumTimes = jogoData.num_times || 2
+        const defaultPorTime = jogadoresData.length > 0
+          ? Math.round(jogadoresData.length / defaultNumTimes)
+          : 5
+        setNumTimesConfig(defaultNumTimes)
+        setJogadoresPorTime(Math.max(1, defaultPorTime))
       }
     } catch (err) {
       console.error(err)
@@ -66,11 +76,21 @@ export default function JogoTimes() {
     }
   }
 
+  function handleSortear() {
+    if (jogadores.length === 0) return
+    const shuffled = [...jogadores].sort(() => Math.random() - 0.5)
+    setResultado(sortearTimes(shuffled, numTimesConfig, jogadoresPorTime))
+    setConfigStep(false)
+  }
+
   function handleSortearNovamente() {
     if (jogadores.length === 0) return
     const shuffled = [...jogadores].sort(() => Math.random() - 0.5)
-    const numTimes = jogo?.num_times || 2
-    setResultado(sortearTimes(shuffled, numTimes))
+    setResultado(sortearTimes(shuffled, numTimesConfig, jogadoresPorTime))
+  }
+
+  function handleVoltarConfig() {
+    setConfigStep(true)
   }
 
   async function handleConfirmarSorteio() {
@@ -114,7 +134,8 @@ export default function JogoTimes() {
 
       // Remove notificações antigas de times_sorteados para este jogo e recria
       await supabase.from('notificacoes').delete().eq('jogo_id', id).eq('tipo', 'times_sorteados')
-      const notificacoes = jogadores.map((j) => ({
+      const jogadoresSorteados = resultado.times.flat()
+      const notificacoes = jogadoresSorteados.map((j) => ({
         profile_id: j.id,
         tipo: 'times_sorteados',
         jogo_id: id,
@@ -130,7 +151,15 @@ export default function JogoTimes() {
     }
   }
 
-  const { times, goleiroFixo } = resultado
+  const { times, goleiroFixo, reservas } = resultado
+  const isCreator = user?.id === jogo?.criado_por
+
+  // Config calculations
+  const timesCompletos = jogadoresPorTime > 0 ? Math.floor(jogadores.length / jogadoresPorTime) : 0
+  const jogadoresNecessarios = numTimesConfig * jogadoresPorTime
+  const sobram = jogadores.length - jogadoresNecessarios
+  const faltam = jogadoresNecessarios - jogadores.length
+  const temQuorum = jogadores.length >= jogadoresNecessarios
 
   if (loading) {
     return (
@@ -142,6 +171,120 @@ export default function JogoTimes() {
     )
   }
 
+  // Config step (only for creator, before drawing)
+  if (configStep && isCreator) {
+    return (
+      <Layout>
+        <div
+          className="px-5 pt-10 pb-5"
+          style={{ background: 'linear-gradient(160deg, #1D9E75, #085041)' }}
+        >
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-white/80 text-sm mb-4 hover:text-white transition-colors"
+          >
+            <ArrowLeft size={18} /> Voltar
+          </button>
+          <h1 className="text-white text-2xl font-bold">Configurar sorteio</h1>
+          <p className="text-white/70 text-sm mt-0.5">
+            {jogadores.length} jogadores confirmados
+          </p>
+        </div>
+
+        <div className="px-5 py-5 space-y-5">
+          {jogadores.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-5xl mb-4">👥</div>
+              <h3 className="font-semibold text-gray-700 mb-2">Nenhum jogador confirmado</h3>
+              <p className="text-gray-400 text-sm">
+                Aguarde os jogadores confirmarem presença para sortear os times.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Quantos times */}
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Quantos times?</p>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setNumTimesConfig(v => Math.max(2, v - 1))}
+                    className="w-10 h-10 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-600 text-xl font-bold hover:border-verde-campo hover:text-verde-campo transition-colors"
+                  >
+                    −
+                  </button>
+                  <span className="text-3xl font-bold text-gray-800 w-8 text-center">{numTimesConfig}</span>
+                  <button
+                    onClick={() => setNumTimesConfig(v => Math.min(8, v + 1))}
+                    className="w-10 h-10 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-600 text-xl font-bold hover:border-verde-campo hover:text-verde-campo transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Jogadores por time */}
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Jogadores por time?</p>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setJogadoresPorTime(v => Math.max(1, v - 1))}
+                    className="w-10 h-10 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-600 text-xl font-bold hover:border-verde-campo hover:text-verde-campo transition-colors"
+                  >
+                    −
+                  </button>
+                  <span className="text-3xl font-bold text-gray-800 w-8 text-center">{jogadoresPorTime}</span>
+                  <button
+                    onClick={() => setJogadoresPorTime(v => Math.min(15, v + 1))}
+                    className="w-10 h-10 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-600 text-xl font-bold hover:border-verde-campo hover:text-verde-campo transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Status / aviso */}
+              {temQuorum ? (
+                <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-800">
+                  <span className="text-lg leading-none mt-0.5">✅</span>
+                  <span>
+                    {sobram === 0
+                      ? `Todos os ${jogadores.length} jogadores serão sorteados em ${numTimesConfig} times de ${jogadoresPorTime}.`
+                      : `${numTimesConfig} times de ${jogadoresPorTime} jogadores. ${sobram} jogador${sobram > 1 ? 'es' : ''} ficarão como reserva.`}
+                  </span>
+                </div>
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800 space-y-1">
+                  <p className="font-semibold">Jogadores insuficientes para {numTimesConfig} times completos</p>
+                  <p>
+                    Faltam {faltam} jogador{faltam > 1 ? 'es' : ''} para fechar {numTimesConfig} times de {jogadoresPorTime}.
+                    {timesCompletos > 0 && ` Com ${jogadores.length} confirmados, é possível fazer ${timesCompletos} time${timesCompletos > 1 ? 's' : ''} completo${timesCompletos > 1 ? 's' : ''}.`}
+                  </p>
+                  {timesCompletos > 0 && timesCompletos < numTimesConfig && (
+                    <button
+                      onClick={() => setNumTimesConfig(timesCompletos)}
+                      className="mt-1 text-amber-900 font-semibold underline underline-offset-2"
+                    >
+                      Usar {timesCompletos} times
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <button
+                onClick={handleSortear}
+                className="w-full flex items-center justify-center gap-2 bg-verde-campo text-white font-bold py-4 rounded-xl hover:bg-verde-escuro transition-colors"
+              >
+                <Shuffle size={18} />
+                Sortear times
+              </button>
+            </>
+          )}
+        </div>
+      </Layout>
+    )
+  }
+
+  // Results step
   return (
     <Layout>
       <div
@@ -149,25 +292,28 @@ export default function JogoTimes() {
         style={{ background: 'linear-gradient(160deg, #1D9E75, #085041)' }}
       >
         <button
-          onClick={() => navigate(-1)}
+          onClick={isCreator ? handleVoltarConfig : () => navigate(-1)}
           className="flex items-center gap-2 text-white/80 text-sm mb-4 hover:text-white transition-colors"
         >
-          <ArrowLeft size={18} /> Voltar
+          <ArrowLeft size={18} /> {isCreator ? 'Reconfigurar' : 'Voltar'}
         </button>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-white text-2xl font-bold">Times sorteados</h1>
             <p className="text-white/70 text-sm mt-0.5">
-              {jogadores.length} jogadores · {times.length} times
+              {times.flat().length} jogadores · {times.length} times
+              {reservas.length > 0 && ` · ${reservas.length} reserva${reservas.length > 1 ? 's' : ''}`}
             </p>
           </div>
-          <button
-            onClick={handleSortearNovamente}
-            className="flex items-center gap-2 bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-white/30 transition-colors"
-          >
-            <Shuffle size={16} />
-            Sortear
-          </button>
+          {isCreator && (
+            <button
+              onClick={handleSortearNovamente}
+              className="flex items-center gap-2 bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-white/30 transition-colors"
+            >
+              <Shuffle size={16} />
+              Sortear
+            </button>
+          )}
         </div>
       </div>
 
@@ -188,6 +334,7 @@ export default function JogoTimes() {
                 <span>Goleiros fixos — não entram no revezamento entre os times.</span>
               </div>
             )}
+
             {times.map((time, idx) => {
               const corConfig = CORES_TIMES[idx % CORES_TIMES.length]
               const media = calcularMediaTime(time)
@@ -260,7 +407,47 @@ export default function JogoTimes() {
               )
             })}
 
-            {user?.id === jogo?.criado_por && (
+            {/* Reservas */}
+            {reservas.length > 0 && (
+              <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-4 py-3 flex items-center gap-2 bg-gray-100">
+                  <Users size={16} className="text-gray-500" />
+                  <h3 className="font-bold text-gray-700">
+                    Reservas ({reservas.length})
+                  </h3>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {reservas.map((jogador) => (
+                    <div key={jogador.id} className="flex items-center gap-3 px-4 py-2.5">
+                      <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-100">
+                        {jogador.foto_url ? (
+                          <img src={jogador.foto_url} alt={jogador.nome} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600 font-bold text-sm">
+                            {jogador.nome[0].toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-800 text-sm truncate">{jogador.nome}</p>
+                        {jogador.posicao_principal && (
+                          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${getPosicaoCor(jogador.posicao_principal)}`}>
+                            {getPosicaoLabel(jogador.posicao_principal)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-shrink-0">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                          {jogador.nivel.toFixed(1)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {isCreator && (
               <>
                 <button
                   onClick={handleSortearNovamente}
