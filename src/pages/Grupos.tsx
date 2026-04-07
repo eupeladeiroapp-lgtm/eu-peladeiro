@@ -127,7 +127,7 @@ export default function Grupos() {
         </div>
         <button
           onClick={() => {
-            if (!profile?.is_pro && grupos.length >= 2) {
+            if (!profile?.is_pro && grupos.length >= 3) {
               setShowUpgrade(true)
             } else {
               setShowModal(true)
@@ -186,12 +186,12 @@ export default function Grupos() {
                 <ChevronRight size={18} className="text-gray-400 flex-shrink-0" />
               </button>
             ))}
-            {!profile?.is_pro && grupos.length >= 2 && (
+            {!profile?.is_pro && grupos.length >= 3 && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
                 <span className="text-xl">⭐</span>
                 <div>
                   <p className="font-semibold text-amber-800 text-sm">Limite do plano Free atingido</p>
-                  <p className="text-amber-600 text-xs mt-0.5">Você atingiu o limite de 2 grupos. Faça upgrade para Pro e crie grupos ilimitados.</p>
+                  <p className="text-amber-600 text-xs mt-0.5">Você atingiu o limite de 3 grupos. Faça upgrade para Pro e crie grupos ilimitados.</p>
                   <button
                     onClick={() => setShowUpgrade(true)}
                     className="mt-2 bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg"
@@ -208,7 +208,7 @@ export default function Grupos() {
       {showUpgrade && (
         <ModalUpgradePro
           titulo="Limite de grupos atingido"
-          descricao="No plano Free você pode criar até 2 grupos. Faça upgrade para Pro e crie grupos ilimitados!"
+          descricao="No plano Free você pode participar de até 3 grupos. Faça upgrade para Pro e crie grupos ilimitados!"
           onFechar={() => setShowUpgrade(false)}
         />
       )}

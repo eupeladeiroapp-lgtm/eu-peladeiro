@@ -229,6 +229,15 @@ export default function Convites() {
             })
             continue
           }
+          if (notif.tipo === 'avaliacao_recebida') {
+            resultado.push({
+              tipo: 'avaliacao_recebida',
+              jogo: null,
+              grupoNome: '',
+              notificacaoId: notif.id,
+            })
+            continue
+          }
           if (!notif.jogo) continue
           resultado.push({
             tipo: notif.tipo,

@@ -51,6 +51,10 @@ export default function GrupoDetalhe() {
   const [saving, setSaving] = useState(false)
   const [showDeleteGrupo, setShowDeleteGrupo] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showSairGrupo, setShowSairGrupo] = useState(false)
+  const [saindo, setSaindo] = useState(false)
+  const [membroParaRemover, setMembroParaRemover] = useState<(GrupoMembro & { profile: Profile }) | null>(null)
+  const [removendo, setRemovendo] = useState(false)
 
   // Edit/delete jogo
   const [showEditJogo, setShowEditJogo] = useState(false)
@@ -270,6 +274,40 @@ export default function GrupoDetalhe() {
     }
   }
 
+  async function handleRemoverMembro() {
+    if (!id || !membroParaRemover) return
+    setRemovendo(true)
+    try {
+      const { error } = await supabase
+        .from('grupo_membros')
+        .delete()
+        .eq('grupo_id', id)
+        .eq('profile_id', membroParaRemover.profile_id)
+      if (error) { console.error('Erro ao remover membro:', error); toast.error('Não foi possível remover o membro. Tente novamente.'); setMembroParaRemover(null); return }
+      setMembroParaRemover(null)
+      fetchAll()
+      toast.success(`${membroParaRemover.profile?.nome || 'Membro'} removido do grupo.`)
+    } finally {
+      setRemovendo(false)
+    }
+  }
+
+  async function handleSairGrupo() {
+    if (!id || !user) return
+    setSaindo(true)
+    try {
+      const { error } = await supabase
+        .from('grupo_membros')
+        .delete()
+        .eq('grupo_id', id)
+        .eq('profile_id', user.id)
+      if (error) { console.error('Erro ao sair do grupo:', error); toast.error('Não foi possível sair do grupo. Tente novamente.'); setShowSairGrupo(false); return }
+      navigate('/grupos')
+    } finally {
+      setSaindo(false)
+    }
+  }
+
   async function handleDeleteGrupo() {
     if (!id) return
     setDeleting(true)
@@ -422,6 +460,13 @@ export default function GrupoDetalhe() {
               ⭐ Avaliar jogadores
             </button>
 
+            <button
+              onClick={() => setShowSairGrupo(true)}
+              className="w-full flex items-center justify-center gap-2 text-red-500 font-semibold py-3 rounded-xl border-2 border-red-100 hover:bg-red-50 transition-colors"
+            >
+              <X size={16} /> Sair do grupo
+            </button>
+
             {loading ? (
               [1, 2, 3].map((i) => (
                 <div key={i} className="bg-white rounded-lg p-4 animate-pulse h-16" />
@@ -454,11 +499,18 @@ export default function GrupoDetalhe() {
                       </span>
                     )}
                   </div>
-                  {membro.role === 'admin' && (
+                  {membro.role === 'admin' ? (
                     <div className="flex items-center gap-1 text-dourado">
                       <Crown size={14} />
                       <span className="text-xs font-semibold">Admin</span>
                     </div>
+                  ) : isAdmin && (
+                    <button
+                      onClick={() => setMembroParaRemover(membro)}
+                      className="w-8 h-8 flex items-center justify-center rounded-full text-red-400 hover:bg-red-50 transition-colors flex-shrink-0"
+                    >
+                      <X size={16} />
+                    </button>
                   )}
                 </div>
               ))
@@ -867,6 +919,55 @@ export default function GrupoDetalhe() {
           descricao="No plano Free cada grupo pode ter até 25 membros. Faça upgrade para Pro e convide jogadores ilimitados!"
           onFechar={() => setShowUpgradeMembros(false)}
         />
+      )}
+
+      {/* Modal confirmar remoção de membro (admin) */}
+      {membroParaRemover && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-5">
+          <div className="w-full max-w-sm bg-white rounded-2xl p-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Remover membro?</h2>
+            <p className="text-gray-500 text-sm mb-5">
+              <strong>{membroParaRemover.profile?.nome || 'Este jogador'}</strong> será removido do grupo e precisará de um novo convite para entrar.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setMembroParaRemover(null)}
+                className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold">
+                Cancelar
+              </button>
+              <button onClick={handleRemoverMembro} disabled={removendo}
+                className="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold disabled:opacity-60">
+                {removendo ? 'Removendo...' : 'Remover'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmar saída do grupo */}
+      {showSairGrupo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-5">
+          <div className="w-full max-w-sm bg-white rounded-2xl p-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Sair do grupo?</h2>
+            <p className="text-gray-500 text-sm mb-4">
+              Você perderá acesso ao grupo <strong>{grupo?.nome}</strong> e precisará de um novo convite para entrar.
+            </p>
+            {isAdmin && (
+              <p className="text-amber-600 text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+                Você é admin deste grupo. Se sair, o grupo ficará sem administrador.
+              </p>
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => setShowSairGrupo(false)}
+                className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold">
+                Cancelar
+              </button>
+              <button onClick={handleSairGrupo} disabled={saindo}
+                className="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold disabled:opacity-60">
+                {saindo ? 'Saindo...' : 'Sair'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </Layout>
   )
