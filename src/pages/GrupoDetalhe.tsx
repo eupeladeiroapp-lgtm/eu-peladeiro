@@ -274,16 +274,35 @@ export default function GrupoDetalhe() {
     }
   }
 
+  async function limparConfirmacoesDoMembro(profileId: string) {
+    // Busca jogos abertos do grupo e remove as confirmações do membro
+    const { data: jogosAbertos } = await supabase
+      .from('jogos')
+      .select('id')
+      .eq('grupo_id', id)
+      .eq('status', 'aberto')
+    if (jogosAbertos && jogosAbertos.length > 0) {
+      const jogoIds = jogosAbertos.map((j: { id: string }) => j.id)
+      await supabase
+        .from('confirmacoes')
+        .delete()
+        .eq('profile_id', profileId)
+        .in('jogo_id', jogoIds)
+    }
+  }
+
   async function handleRemoverMembro() {
     if (!id || !membroParaRemover) return
     setRemovendo(true)
     try {
+      const profileId = membroParaRemover.profile_id
       const { error } = await supabase
         .from('grupo_membros')
         .delete()
         .eq('grupo_id', id)
-        .eq('profile_id', membroParaRemover.profile_id)
+        .eq('profile_id', profileId)
       if (error) { console.error('Erro ao remover membro:', error); toast.error('Não foi possível remover o membro. Tente novamente.'); setMembroParaRemover(null); return }
+      await limparConfirmacoesDoMembro(profileId)
       setMembroParaRemover(null)
       fetchAll()
       toast.success(`${membroParaRemover.profile?.nome || 'Membro'} removido do grupo.`)
@@ -302,6 +321,7 @@ export default function GrupoDetalhe() {
         .eq('grupo_id', id)
         .eq('profile_id', user.id)
       if (error) { console.error('Erro ao sair do grupo:', error); toast.error('Não foi possível sair do grupo. Tente novamente.'); setShowSairGrupo(false); return }
+      await limparConfirmacoesDoMembro(user.id)
       navigate('/grupos')
     } finally {
       setSaindo(false)
