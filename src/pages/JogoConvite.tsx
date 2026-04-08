@@ -206,12 +206,25 @@ export default function JogoConvite() {
 
   const confirmados = confirmacoes.filter((c) => c.status === 'confirmado')
 
+  const agora = new Date()
+
+  // Jogo iniciou (passou do horário de início)
+  const jogoIniciou = jogo ? agora > new Date(jogo.data_hora) : false
+
+  // Jogo encerrado pelo status ou por já ter passado do horário
   const jogoEncerrado = jogo
-    ? jogo.status === 'encerrado' || new Date() > new Date(jogo.data_hora)
+    ? jogo.status === 'encerrado' || jogoIniciou
     : false
 
+  // Janela de 3 dias após o início do jogo para apontar realizações
+  const dentroJanelaRealizacoes = jogo
+    ? agora < new Date(new Date(jogo.data_hora).getTime() + 3 * 24 * 60 * 60 * 1000)
+    : false
+
+  const podeApontarRealizacoes = jogoIniciou && dentroJanelaRealizacoes && userStatus === 'confirmado'
+
   const prazoEncerrado = jogo
-    ? new Date() > new Date(new Date(jogo.data_hora).getTime() - 30 * 60 * 1000)
+    ? agora > new Date(new Date(jogo.data_hora).getTime() - 30 * 60 * 1000)
     : false
 
   const isAdmin = user && jogo ? jogo.criado_por === user.id : false
@@ -476,12 +489,12 @@ export default function JogoConvite() {
               </div>
             ) : null}
 
-            {jogoEncerrado && (
+            {podeApontarRealizacoes && (
               <button
                 onClick={() => navigate(`/jogo/${jogo.id}/registro`)}
                 className="w-full flex items-center justify-center gap-2 bg-verde-campo text-white font-bold py-4 rounded-xl hover:bg-verde-escuro transition-colors"
               >
-                📊 Registrar estatísticas
+                📊 Minhas Realizações
               </button>
             )}
 

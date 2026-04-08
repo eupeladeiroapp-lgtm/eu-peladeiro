@@ -568,7 +568,10 @@ export default function GrupoDetalhe() {
               </div>
             ) : jogos.length > 0 ? (
               <div className="space-y-4">
-                {jogos.map((jogo) => (
+                {jogos.map((jogo) => {
+                  const dentroJanelaRealizacoes = new Date() < new Date(new Date(jogo.data_hora).getTime() + 3 * 24 * 60 * 60 * 1000)
+                  const podeApontarRealizacoes = jogo.status === 'encerrado' && dentroJanelaRealizacoes
+                  return (
                   <div key={jogo.id} className="space-y-2">
                     <CardJogo
                       jogo={jogo}
@@ -577,12 +580,22 @@ export default function GrupoDetalhe() {
                       onClick={() => navigate(`/jogo/${jogo.link_token}`)}
                     />
                     <div className="flex gap-2 px-1">
-                      <button
-                        onClick={() => handleConvidarJogo(jogo)}
-                        className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold py-2 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <Share2 size={14} /> Convidar
-                      </button>
+                      {jogo.status !== 'encerrado' && (
+                        <button
+                          onClick={() => handleConvidarJogo(jogo)}
+                          className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <Share2 size={14} /> Convidar
+                        </button>
+                      )}
+                      {podeApontarRealizacoes && (
+                        <button
+                          onClick={() => navigate(`/jogo/${jogo.id}/registro`)}
+                          className="flex-1 flex items-center justify-center gap-1.5 bg-verde-campo text-white text-sm font-semibold py-2 rounded-lg hover:bg-verde-escuro transition-colors"
+                        >
+                          📊 Minhas Realizações
+                        </button>
+                      )}
                       {isAdmin && jogo.status === 'aberto' && (
                         <>
                           <button
@@ -607,7 +620,8 @@ export default function GrupoDetalhe() {
                       )}
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="text-center py-10 text-gray-400">

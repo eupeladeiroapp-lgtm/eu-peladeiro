@@ -29,6 +29,7 @@ export default function Home() {
     if (!user) return
     fetchJogos()
     fetchStats()
+    checkLembretes()
   }, [user])
 
   async function fetchJogos() {
@@ -141,6 +142,71 @@ export default function Home() {
     )
     setJogos((prev) => prev.map((j) => j.id === jogoId ? { ...j, userStatus: 'recusado', confirmados: j.confirmados - (j.userStatus === 'confirmado' ? 1 : 0) } : j))
     toast('Presença recusada', { icon: '👋' })
+  }
+
+  async function checkLembretes() {
+    if (!user) return
+    try {
+      const agora = new Date()
+      const dozeHorasAtras = new Date(agora.getTime() - 12 * 60 * 60 * 1000).toISOString()
+      const tresDiasAtras = new Date(agora.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString()
+
+      // Jogos encerrados entre 12h e 3 dias atrás
+      const { data: jogosEncerrados } = await supabase
+        .from('jogos')
+        .select('id')
+        .eq('status', 'encerrado')
+        .gte('data_hora', tresDiasAtras)
+        .lte('data_hora', dozeHorasAtras)
+
+      if (!jogosEncerrados || jogosEncerrados.length === 0) return
+      const jogoIds = jogosEncerrados.map((j) => j.id)
+
+      // Verifica se o usuário estava confirmado nesses jogos
+      const { data: confsData } = await supabase
+        .from('confirmacoes')
+        .select('jogo_id')
+        .eq('profile_id', user.id)
+        .eq('status', 'confirmado')
+        .in('jogo_id', jogoIds)
+
+      if (!confsData || confsData.length === 0) return
+      const confirmadoIds = confsData.map((c) => c.jogo_id)
+
+      // Verifica quais já têm notificação de lembrete
+      const { data: notifsExistentes } = await supabase
+        .from('notificacoes')
+        .select('jogo_id')
+        .eq('profile_id', user.id)
+        .eq('tipo', 'lembrete_estatistica')
+        .in('jogo_id', confirmadoIds)
+
+      const comNotif = new Set((notifsExistentes || []).map((n) => n.jogo_id))
+
+      // Verifica quais já têm estatísticas registradas
+      const { data: statsExistentes } = await supabase
+        .from('estatisticas')
+        .select('jogo_id')
+        .eq('profile_id', user.id)
+        .in('jogo_id', confirmadoIds)
+
+      const comStats = new Set((statsExistentes || []).map((s) => s.jogo_id))
+
+      // Cria notificações para jogos sem lembrete e sem estatísticas
+      const paraNotificar = confirmadoIds.filter((id) => !comNotif.has(id) && !comStats.has(id))
+      if (paraNotificar.length === 0) return
+
+      await supabase.from('notificacoes').insert(
+        paraNotificar.map((jogoId) => ({
+          profile_id: user.id,
+          tipo: 'lembrete_estatistica',
+          jogo_id: jogoId,
+          lida: false,
+        }))
+      )
+    } catch (err) {
+      console.error('checkLembretes error:', err)
+    }
   }
 
   async function fetchStats() {

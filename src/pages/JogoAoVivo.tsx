@@ -385,12 +385,13 @@ export default function JogoAoVivo() {
           </div>
         )}
 
-        {jogo?.status === 'em_andamento' && (
+        {jogo && (jogo.status === 'em_andamento' || jogo.status === 'encerrado') &&
+          new Date() < new Date(new Date(jogo.data_hora).getTime() + 3 * 24 * 60 * 60 * 1000) && (
           <button
             onClick={() => navigate(`/jogo/${id}/registro`)}
             className="w-full border-2 border-verde-campo text-verde-campo font-bold py-4 rounded-xl hover:bg-verde-claro transition-colors"
           >
-            Registrar estatísticas
+            📊 Minhas Realizações
           </button>
         )}
       </div>
