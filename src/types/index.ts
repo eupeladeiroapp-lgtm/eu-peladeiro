@@ -13,6 +13,9 @@ export interface Profile {
     velocidade: number
   }
   is_pro: boolean
+  pro_expires_at: string | null
+  pro_sku: string | null
+  pro_purchase_token: string | null
   created_at: string
 }
 
