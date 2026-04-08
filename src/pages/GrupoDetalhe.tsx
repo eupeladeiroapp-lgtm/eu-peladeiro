@@ -1,4 +1,5 @@
 import { ArrowLeft, Calendar, Crown, Pencil, Plus, Share2, Shuffle, Trash2, Trophy, User, Users, X } from 'lucide-react'
+import { statusEfetivo } from '../utils/jogo'
 import { getPosicaoCor, getPosicaoLabel } from '../utils/posicoes'
 import React, { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -569,18 +570,19 @@ export default function GrupoDetalhe() {
             ) : jogos.length > 0 ? (
               <div className="space-y-4">
                 {jogos.map((jogo) => {
+                  const jogoStatus = statusEfetivo(jogo)
                   const dentroJanelaRealizacoes = new Date() < new Date(new Date(jogo.data_hora).getTime() + 3 * 24 * 60 * 60 * 1000)
-                  const podeApontarRealizacoes = jogo.status === 'encerrado' && dentroJanelaRealizacoes
+                  const podeApontarRealizacoes = jogoStatus === 'encerrado' && dentroJanelaRealizacoes
                   return (
                   <div key={jogo.id} className="space-y-2">
                     <CardJogo
-                      jogo={jogo}
+                      jogo={{ ...jogo, status: jogoStatus }}
                       confirmados={confirmadosPorJogo[jogo.id] || 0}
                       totalVagas={membros.length}
                       onClick={() => navigate(`/jogo/${jogo.link_token}`)}
                     />
                     <div className="flex gap-2 px-1">
-                      {jogo.status !== 'encerrado' && (
+                      {jogoStatus !== 'encerrado' && (
                         <button
                           onClick={() => handleConvidarJogo(jogo)}
                           className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold py-2 rounded-lg hover:bg-gray-50 transition-colors"
@@ -596,7 +598,7 @@ export default function GrupoDetalhe() {
                           📊 Minhas Realizações
                         </button>
                       )}
-                      {isAdmin && jogo.status === 'aberto' && (
+                      {isAdmin && jogoStatus === 'aberto' && (
                         <>
                           <button
                             onClick={() => navigate(`/jogo/${jogo.id}/times`)}

@@ -1,4 +1,5 @@
 import { Bell, Plus, Shield, Users, X } from 'lucide-react'
+import { calcularFimJogo, statusEfetivo } from '../utils/jogo'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
@@ -47,21 +48,6 @@ export default function Home() {
       const agora = new Date()
       // Janela de busca: jogos não encerrados com início nas últimas 24h ou no futuro
       const vintEquatroHorasAtras = new Date(agora.getTime() - 24 * 60 * 60 * 1000).toISOString()
-
-      // Calcula o horário real de fim do jogo
-      function calcularFimJogo(dataHora: string, horaFim?: string | null): Date {
-        const inicio = new Date(dataHora)
-        if (horaFim) {
-          const [h, m] = horaFim.split(':').map(Number)
-          const fim = new Date(inicio)
-          fim.setHours(h, m, 0, 0)
-          // Se hora_fim < hora_inicio (ex: jogo começa às 23h, fim às 00h30), avança um dia
-          if (fim <= inicio) fim.setDate(fim.getDate() + 1)
-          return fim
-        }
-        // Sem hora_fim: assume duração de 1h30
-        return new Date(inicio.getTime() + 90 * 60 * 1000)
-      }
 
       // Busca jogos dos grupos — não encerrados com início nas últimas 24h ou no futuro
       const jogosGrupoRaw = grupoIds.length > 0
@@ -338,7 +324,7 @@ export default function Home() {
             {jogos.map((jogo) => (
               <CardJogo
                 key={jogo.id}
-                jogo={jogo}
+                jogo={{ ...jogo, status: statusEfetivo(jogo) }}
                 groupName={jogo.grupoNome}
                 confirmados={jogo.confirmados}
                 totalVagas={jogo.totalMembros}
