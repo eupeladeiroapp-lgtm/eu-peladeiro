@@ -45,21 +45,41 @@ export default function Home() {
       const grupoIds = (membros || []).map((m) => m.grupo_id)
 
       const agora = new Date()
-      const agoraIso = agora.toISOString()
-      // Em andamento só aparece se o jogo começou nas últimas 8 horas (evita jogos esquecidos "ao vivo")
-      const oitoHorasAtras = new Date(agora.getTime() - 8 * 60 * 60 * 1000).toISOString()
+      // Janela de busca: jogos não encerrados com início nas últimas 24h ou no futuro
+      const vintEquatroHorasAtras = new Date(agora.getTime() - 24 * 60 * 60 * 1000).toISOString()
 
-      // Busca jogos dos grupos — abertos (futuros) + em andamento recentes
-      const jogosGrupo = grupoIds.length > 0
+      // Calcula o horário real de fim do jogo
+      function calcularFimJogo(dataHora: string, horaFim?: string | null): Date {
+        const inicio = new Date(dataHora)
+        if (horaFim) {
+          const [h, m] = horaFim.split(':').map(Number)
+          const fim = new Date(inicio)
+          fim.setHours(h, m, 0, 0)
+          // Se hora_fim < hora_inicio (ex: jogo começa às 23h, fim às 00h30), avança um dia
+          if (fim <= inicio) fim.setDate(fim.getDate() + 1)
+          return fim
+        }
+        // Sem hora_fim: assume duração de 1h30
+        return new Date(inicio.getTime() + 90 * 60 * 1000)
+      }
+
+      // Busca jogos dos grupos — não encerrados com início nas últimas 24h ou no futuro
+      const jogosGrupoRaw = grupoIds.length > 0
         ? (await supabase
             .from('jogos')
             .select('*, grupo:grupos(nome)')
             .in('grupo_id', grupoIds)
-            .or(`and(status.eq.em_andamento,data_hora.gte.${oitoHorasAtras}),and(status.eq.aberto,data_hora.gte.${agoraIso})`)
+            .neq('status', 'encerrado')
+            .gte('data_hora', vintEquatroHorasAtras)
             .order('data_hora', { ascending: true })
-            .limit(10)
+            .limit(20)
           ).data || []
         : []
+
+      // Filtra client-side: só mostra se ainda não passou do horário de fim
+      const jogosGrupo = jogosGrupoRaw.filter((j) =>
+        calcularFimJogo(j.data_hora, j.hora_fim) > agora
+      )
 
       // Busca jogos avulsos (convidado via link)
       const { data: confsAvulsas } = await supabase
@@ -69,16 +89,21 @@ export default function Home() {
         .eq('tipo_convite', 'avulso')
 
       const jogoIdsAvulsos = (confsAvulsas || []).map((c) => c.jogo_id)
-      const grupoIdsJaVistos = new Set(jogosGrupo.map((j) => j.id))
+      const grupoIdsJaVistos = new Set(jogosGrupo.map((j: { id: string }) => j.id))
 
-      const jogosAvulsos = jogoIdsAvulsos.length > 0
+      const jogosAvulsosRaw = jogoIdsAvulsos.length > 0
         ? (await supabase
             .from('jogos')
             .select('*, grupo:grupos(nome)')
             .in('id', jogoIdsAvulsos)
-            .or(`and(status.eq.em_andamento,data_hora.gte.${oitoHorasAtras}),and(status.eq.aberto,data_hora.gte.${agoraIso})`)
+            .neq('status', 'encerrado')
+            .gte('data_hora', vintEquatroHorasAtras)
           ).data?.filter((j) => !grupoIdsJaVistos.has(j.id)) || []
         : []
+
+      const jogosAvulsos = jogosAvulsosRaw.filter((j) =>
+        calcularFimJogo(j.data_hora, j.hora_fim) > agora
+      )
 
       const todosJogos = [...jogosGrupo, ...jogosAvulsos].sort(
         (a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime()
