@@ -44,15 +44,18 @@ export default function Home() {
 
       const grupoIds = (membros || []).map((m) => m.grupo_id)
 
-      const agora = new Date().toISOString()
+      const agora = new Date()
+      const agoraIso = agora.toISOString()
+      // Em andamento só aparece se o jogo começou nas últimas 8 horas (evita jogos esquecidos "ao vivo")
+      const oitoHorasAtras = new Date(agora.getTime() - 8 * 60 * 60 * 1000).toISOString()
 
-      // Busca jogos dos grupos — abertos (futuros) + em andamento (qualquer hora)
+      // Busca jogos dos grupos — abertos (futuros) + em andamento recentes
       const jogosGrupo = grupoIds.length > 0
         ? (await supabase
             .from('jogos')
             .select('*, grupo:grupos(nome)')
             .in('grupo_id', grupoIds)
-            .or(`status.eq.em_andamento,and(status.eq.aberto,data_hora.gte.${agora})`)
+            .or(`and(status.eq.em_andamento,data_hora.gte.${oitoHorasAtras}),and(status.eq.aberto,data_hora.gte.${agoraIso})`)
             .order('data_hora', { ascending: true })
             .limit(10)
           ).data || []
@@ -73,7 +76,7 @@ export default function Home() {
             .from('jogos')
             .select('*, grupo:grupos(nome)')
             .in('id', jogoIdsAvulsos)
-            .or(`status.eq.em_andamento,and(status.eq.aberto,data_hora.gte.${agora})`)
+            .or(`and(status.eq.em_andamento,data_hora.gte.${oitoHorasAtras}),and(status.eq.aberto,data_hora.gte.${agoraIso})`)
           ).data?.filter((j) => !grupoIdsJaVistos.has(j.id)) || []
         : []
 
