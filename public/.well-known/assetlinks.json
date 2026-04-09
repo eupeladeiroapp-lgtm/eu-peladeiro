@@ -3,6 +3,6 @@
   "target": {
     "namespace": "android_app",
     "package_name": "com.eupeladeiro.app",
-    "sha256_cert_fingerprints": ["SUBSTITUIR_PELO_FINGERPRINT_DO_BUBBLEWRAP"]
+    "sha256_cert_fingerprints": ["D5:97:F7:CD:E0:32:0A:13:7A:2E:F0:57:09:02:52:1D:A2:55:C0:D0:40:A0:F5:71:C6:CF:1A:31:DC:7E:2C:AC"]
   }
 }]
