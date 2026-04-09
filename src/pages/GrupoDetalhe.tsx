@@ -316,6 +316,24 @@ export default function GrupoDetalhe() {
     if (!id || !user) return
     setSaindo(true)
     try {
+      if (isAdmin) {
+        const outrosMembros = membros.filter((m) => m.profile_id !== user.id)
+        if (outrosMembros.length === 0) {
+          // Último membro — exclui o grupo inteiro
+          const { error } = await supabase.from('grupos').delete().eq('id', id)
+          if (error) { console.error('Erro ao excluir grupo vazio:', error); toast.error('Não foi possível excluir o grupo. Tente novamente.'); setShowSairGrupo(false); return }
+          navigate('/grupos')
+          return
+        }
+        // Transfere admin para um membro aleatório
+        const novoAdmin = outrosMembros[Math.floor(Math.random() * outrosMembros.length)]
+        const { error: errAdmin } = await supabase
+          .from('grupo_membros')
+          .update({ role: 'admin' })
+          .eq('grupo_id', id)
+          .eq('profile_id', novoAdmin.profile_id)
+        if (errAdmin) { console.error('Erro ao transferir admin:', errAdmin); toast.error('Não foi possível transferir a administração. Tente novamente.'); setShowSairGrupo(false); return }
+      }
       const { error } = await supabase
         .from('grupo_membros')
         .delete()
@@ -989,7 +1007,9 @@ export default function GrupoDetalhe() {
             </p>
             {isAdmin && (
               <p className="text-amber-600 text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
-                Você é admin deste grupo. Se sair, o grupo ficará sem administrador.
+                {membros.filter((m) => m.profile_id !== user?.id).length === 0
+                  ? 'Você é o único membro. Sair irá excluir o grupo permanentemente.'
+                  : 'Você é admin. A administração será transferida automaticamente para outro membro.'}
               </p>
             )}
             <div className="flex gap-3">
