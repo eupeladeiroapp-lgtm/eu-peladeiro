@@ -668,7 +668,7 @@ export default function GrupoDetalhe() {
             ) : (
               <RankingList
                 entries={rankings}
-                unidade={rankingTab === 'goleador' ? 'gols' : rankingTab === 'garcom' ? 'assist.' : rankingTab === 'muralha' ? 'defesas' : 'vitórias'}
+                unidade={rankingTab === 'goleador' ? 'gols' : rankingTab === 'garcom' ? 'assist.' : rankingTab === 'muralha' ? 'defesas' : rankingTab === 'empates' ? 'empates' : 'vitórias'}
               />
             )}
 

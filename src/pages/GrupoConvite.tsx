@@ -62,6 +62,18 @@ export default function GrupoConvite() {
         .single()
 
       if (!existing) {
+        // Verifica limite de grupos para usuário Free
+        if (!profile?.is_pro) {
+          const { count: gruposCount } = await supabase
+            .from('grupo_membros')
+            .select('*', { count: 'exact', head: true })
+            .eq('profile_id', user.id)
+          if ((gruposCount || 0) >= 3) {
+            setError('Você atingiu o limite de 3 grupos do plano Free. Faça upgrade para Pro para participar de grupos ilimitados.')
+            return
+          }
+        }
+
         const { error: joinError } = await supabase.from('grupo_membros').insert({
           grupo_id: id,
           profile_id: user.id,
@@ -146,7 +158,15 @@ export default function GrupoConvite() {
 
             {/* Login button */}
             <button
-              onClick={signInWithGoogle}
+              onClick={() =>
+                supabase.auth.signInWithOAuth({
+                  provider: 'google',
+                  options: {
+                    redirectTo: window.location.href,
+                    queryParams: { prompt: 'select_account' },
+                  },
+                })
+              }
               className="w-full bg-white text-verde-campo font-bold py-4 rounded-2xl flex items-center justify-center gap-3 shadow-lg hover:bg-verde-claro transition-colors text-base"
             >
               <svg width="20" height="20" viewBox="0 0 24 24">
