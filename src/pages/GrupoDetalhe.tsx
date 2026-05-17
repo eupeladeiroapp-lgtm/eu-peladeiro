@@ -1,4 +1,4 @@
-import { ArrowLeft, Calendar, Crown, Pencil, Plus, Share2, Shuffle, Trash2, Trophy, User, Users, X } from 'lucide-react'
+import { ArrowLeft, Calendar, Crown, Lock, Pencil, Plus, Share2, Shuffle, Trash2, Trophy, User, Users, X } from 'lucide-react'
 import { statusEfetivo } from '../utils/jogo'
 import { getPosicaoCor, getPosicaoLabel } from '../utils/posicoes'
 import React, { useEffect, useState } from 'react'
@@ -41,6 +41,7 @@ export default function GrupoDetalhe() {
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rankingTab, setRankingTab] = useState<TabRanking>('goleador')
+  const [rankingPeriodo, setRankingPeriodo] = useState<'mes' | 'temporada' | 'historico'>('mes')
   const [rankings, setRankings] = useState<RankingEntry[]>([])
   const [rankingLoading, setRankingLoading] = useState(false)
 
@@ -82,16 +83,25 @@ export default function GrupoDetalhe() {
 
   useEffect(() => {
     if (tab === 'rankings') fetchRankings()
-  }, [tab, rankingTab, id])
+  }, [tab, rankingTab, rankingPeriodo, id])
 
   async function fetchRankings() {
     if (!id) return
     setRankingLoading(true)
     try {
-      const { data: jogoIds } = await supabase
-        .from('jogos')
-        .select('id')
-        .eq('grupo_id', id)
+      let dataCorte: string | null = null
+      if (rankingPeriodo === 'mes') {
+        const d = new Date()
+        d.setDate(1)
+        d.setHours(0, 0, 0, 0)
+        dataCorte = d.toISOString()
+      } else if (rankingPeriodo === 'temporada') {
+        dataCorte = new Date(new Date().getFullYear(), 0, 1).toISOString()
+      }
+
+      let q = supabase.from('jogos').select('id').eq('grupo_id', id)
+      if (dataCorte) q = q.gte('data_hora', dataCorte)
+      const { data: jogoIds } = await q
 
       if (!jogoIds || jogoIds.length === 0) { setRankings([]); return }
 
@@ -319,8 +329,8 @@ export default function GrupoDetalhe() {
       if (isAdmin) {
         const outrosMembros = membros.filter((m) => m.profile_id !== user.id)
         if (outrosMembros.length === 0) {
-          // Último membro — exclui o grupo inteiro
-          const { error } = await supabase.from('grupos').delete().eq('id', id)
+          // Último membro — exclui o grupo inteiro via RPC
+          const { error } = await supabase.rpc('deletar_grupo', { p_grupo_id: id })
           if (error) { console.error('Erro ao excluir grupo vazio:', error); toast.error('Não foi possível excluir o grupo. Tente novamente.'); setShowSairGrupo(false); return }
           navigate('/grupos')
           return
@@ -351,9 +361,18 @@ export default function GrupoDetalhe() {
     if (!id) return
     setDeleting(true)
     try {
-      const { error } = await supabase.from('grupos').delete().eq('id', id)
-      if (error) { console.error('Erro ao deletar grupo:', error); setError('Não foi possível excluir o grupo. Tente novamente.'); setShowDeleteGrupo(false); return }
+      const { error } = await supabase.rpc('deletar_grupo', { p_grupo_id: id })
+      if (error) {
+        console.error('Erro ao deletar grupo:', error)
+        toast.error('Não foi possível excluir o grupo. Tente novamente.')
+        setShowDeleteGrupo(false)
+        return
+      }
       navigate('/grupos')
+    } catch (err) {
+      console.error('Erro inesperado ao deletar grupo:', err)
+      toast.error('Erro inesperado ao excluir o grupo.')
+      setShowDeleteGrupo(false)
     } finally {
       setDeleting(false)
     }
@@ -656,6 +675,31 @@ export default function GrupoDetalhe() {
         {/* Rankings tab */}
         {tab === 'rankings' && (
           <div>
+            {/* Seletor de período */}
+            <div className="flex gap-2 mb-4">
+              {(['mes', 'temporada', 'historico'] as const).map((p) => {
+                const locked = !profile?.is_pro && (p === 'temporada' || p === 'historico')
+                return (
+                  <button
+                    key={p}
+                    onClick={() => locked ? setShowUpgradeMembros(true) : setRankingPeriodo(p)}
+                    className={`flex-1 py-2 text-sm font-semibold rounded-lg border-2 transition-colors ${
+                      rankingPeriodo === p && !locked
+                        ? 'border-verde-campo bg-verde-claro text-verde-campo'
+                        : locked
+                        ? 'border-gray-100 bg-gray-50 text-gray-400'
+                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="flex items-center justify-center gap-1">
+                      {locked && <Lock size={11} />}
+                      {p === 'mes' ? 'Mês' : p === 'temporada' ? 'Temporada' : 'Histórico'}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
             {/* Sub-tabs */}
             <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
               {([
